@@ -105,7 +105,7 @@ table.t th.sorted.asc::after{content:" ▲"}
 table.t tbody tr:hover{background:var(--surface-2)}
 table.t tr.click{cursor:pointer}
 .scroll{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:8px}
-.matrix td{text-align:center;min-width:64px}
+table.t.matrix td{text-align:center;min-width:64px}
 .matrix td .n{font-weight:600}
 .matrix td .p{display:block;font-size:11px;opacity:.85}
 .bar-cell{display:flex;align-items:center;gap:6px;justify-content:flex-end}
@@ -179,6 +179,7 @@ input.search{border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;b
   <div class="wrap">
     <nav class="tabs" id="tabs">
       <button data-t="ov" class="on">全体概要</button>
+      <button data-t="cc">コース・クラス</button>
       <button data-t="gr">成長・到達率</button>
       <button data-t="at">合格までの回数</button>
       <button data-t="sk">技能スコア</button>
@@ -197,6 +198,27 @@ input.search{border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;b
       </div>
       <div class="card" style="margin-top:14px"><div class="card-head"><div><h3>級別の受験状況</h3><div class="sub">延べ受験と、生徒単位での合格状況</div></div><div class="ctrl"><button class="btn small" data-csv="tLevelSummary">CSV</button></div></div>
         <div class="scroll" style="max-height:none"><table class="t" id="tLevelSummary"></table></div></div>
+    </section>
+
+    <!-- コース・クラス -->
+    <section class="tab" id="t-cc">
+      <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3>比較する単位</h3><div class="sub">上部のフィルタ（学年・入学区分など）を掛けた生徒を、選んだ単位で並べて比較します</div></div>
+        <div class="ctrl"><div class="chips" id="ccUnit"><button class="chip on" data-u="cls">クラス</button><button class="chip" data-u="course">コース</button><button class="chip" data-u="gcourse">学年×コース</button></div></div></div>
+        <div class="callout" id="ccNote" style="margin-top:4px"></div></div>
+      <div class="card"><div class="card-head"><div><h3 id="ccTitle">単位別の比較表</h3><div class="sub">各列で最も高い値を太字で表示。列見出しクリックで並べ替え、行の「生徒」で該当生徒の一覧へ</div></div><div class="ctrl"><button class="btn small" data-csv="tCC">CSV</button></div></div>
+        <div class="scroll" style="max-height:none"><table class="t" id="tCC"></table></div>
+        <div class="hint">初回合格率＝各級の1回目の受験で合格した割合（全級合計）。平均回数＝合格までに要した回数の平均（全級合計）。直近回＝読み込んだデータで最も新しい実施回。技能スコアは各生徒の直近の受験のCSE平均。</div></div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="card"><div class="card-head"><div><h3>現在の取得級の構成</h3><div class="sub">単位ごとに100%として、現時点で持っている最上位の級</div></div></div>
+          <div class="legend" id="ccLvLegend"></div><div class="chart tall" id="ccLvWrap"><canvas id="cCCLevel"></canvas></div></div>
+        <div class="card"><div class="card-head"><div><h3>技能別の平均CSE（直近の受験）</h3><div class="sub">各生徒の直近の受験スコアを単位ごとに平均。どの技能が弱いかを比較</div></div></div>
+          <div class="legend" id="ccSkLegend"></div><div class="chart tall" id="ccSkWrap"><canvas id="cCCSkill"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-top:14px"><div class="card-head"><div><h3>到達率の推移（単位別）</h3><div class="sub">各学年の終わりまでに、選んだ級以上を持っていた割合。色が濃いほど高い（5名未満は非表示、＊は今年度の途中経過）</div></div>
+        <div class="ctrl"><label class="muted" style="font-size:12px">到達ライン</label><select id="ccReachLv"></select><button class="btn small" data-csv="tCCReach">CSV</button></div></div>
+        <div class="scroll" style="max-height:none"><table class="t matrix" id="tCCReach"></table></div></div>
+      <div class="card" style="margin-top:14px"><div class="card-head"><div><h3>級別の合格までの回数（単位別）</h3><div class="sub">上段＝合格者の平均回数、下段＝その級を受けた生徒のうち合格した割合（色は合格率）</div></div><div class="ctrl"><button class="btn small" data-csv="tCCAtt">CSV</button></div></div>
+        <div class="scroll" style="max-height:none"><table class="t matrix" id="tCCAtt"></table></div></div>
     </section>
 
     <!-- 成長 -->
@@ -636,11 +658,17 @@ function groupStats(arr){
     perHead: n? ex.length/n : null, passRate:pct(ex.filter(e=>e.pass).length, ex.length), cse: mean(gr), cseN: gr.length };
 }
 
+
+function reachAt(arr, g, thr, minN){
+  const obs = arr.filter(s=> g<=s.gi && (s.entry!=='高校入学' || g>=4) && (s.entry!=='一貫生（内進）' || g>=4 || s.exams.some(e=>e.egi<=3) || s.entryRank!=null));
+  if (obs.length<minN) return null;
+  return {v:pct(obs.filter(s=>P.rankAtGrade(s,g)>=thr).length, obs.length), n:obs.length, partial: g===Math.max(...arr.map(s=>s.gi))};
+}
 /* ---------- 描画 ---------- */
 function render(){
   if(!DATA) return;
   const F = filtered(); $('#nCount').textContent = F.length;
-  ({ov:renderOverview, gr:renderGrowth, at:renderAttempts, sk:renderSkills, bg:renderBackground, st:renderStudents})[state.tab](F);
+  ({ov:renderOverview, cc:renderClassCourse, gr:renderGrowth, at:renderAttempts, sk:renderSkills, bg:renderBackground, st:renderStudents})[state.tab](F);
 }
 
 function renderOverview(F){
@@ -713,12 +741,7 @@ function renderGrowth(F){
   gk = gk.slice(0,6);
   const palette = ['--s1','--s2','--s3','--s4','--s5','--s6'].map(css);
   const xs=[1,2,3,4,5,6];
-  const series = gk.map((k,i)=>{ const arr=groups[k]; const pts = xs.map(g=>{
-      const obs = arr.filter(s=> g<=s.gi && (s.entry!=='高校入学' || g>=4) && (s.entry==='高校入学' || g>=1));
-      const obs2 = obs.filter(s=> s.entry!=='一貫生（内進）' || g>=4 || s.exams.some(e=>e.egi<=3) || s.entryRank!=null);
-      if (obs2.length<5) return null;
-      return {v:pct(obs2.filter(s=>P.rankAtGrade(s,g)>=thr).length, obs2.length), n:obs2.length, partial: g===Math.max(...arr.map(s=>s.gi))};
-    }); return {k, pts, color:palette[i]}; });
+  const series = gk.map((k,i)=>{ const arr=groups[k]; const pts = xs.map(g=>reachAt(arr,g,thr,5)); return {k, pts, color:palette[i]}; });
   $('#reachLegend').innerHTML = legendHTML(series.map(s=>[`${s.k}（${groups[s.k].length}名）`, s.color])) + '<span class="muted">点線＝今年度（途中経過）</span>';
   mk('cReach', { type:'line', data:{ labels: xs.map(g=>GR[g]+'末'), datasets: series.map(s=>({ label:s.k, data:s.pts.map(p=>p?p.v:null), meta:s.pts, borderColor:s.color, backgroundColor:s.color, borderWidth:2, pointRadius:4, pointHoverRadius:6, pointBorderColor:css('--surface'), pointBorderWidth:2, spanGaps:false,
       segment:{ borderDash: ctx => s.pts[ctx.p1DataIndex]?.partial ? [5,4] : undefined } })) },
@@ -794,6 +817,95 @@ function renderSkills(F){
     return [GR[g], arr.length, d.length, mean(d), median(d), pct(d.filter(v=>v>0).length,d.length), mean(per)]; });
   $('#tGrowth').innerHTML = `<thead><tr><th class="l">学年</th><th>生徒数</th><th>2回以上受験</th><th>平均の伸び</th><th>中央値</th><th>伸びた生徒の割合</th><th>1年あたりの伸び(平均)</th></tr></thead><tbody>` +
     rowsG.map(r=>`<tr><td class="l">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td><b>${r[3]==null?'—':(r[3]>=0?'+':'')+r[3].toFixed(0)}</b></td><td>${r[4]==null?'—':r[4].toFixed(0)}</td><td>${fp(r[5])}</td><td>${r[6]==null?'—':r[6].toFixed(0)}</td></tr>`).join('') + '</tbody>';
+}
+
+
+/* ---------- コース・クラス ---------- */
+let ccUnit='cls', ccSort={k:'k',asc:true};
+const COURSE_ORDER=['S','I','A','C','G'];
+$$('#ccUnit .chip').forEach(b=>b.onclick=()=>{ ccUnit=b.dataset.u; $$('#ccUnit .chip').forEach(x=>x.classList.toggle('on',x===b)); ccSort={k:'k',asc:true}; render(); });
+function unitKey(s){
+  if (ccUnit==='course') return s.course ? s.course+'コース' : (s.gi<=3 ? '中学（コース区分なし）' : '');
+  if (ccUnit==='gcourse') return s.course ? s.grade+' '+s.course+'コース' : (s.gi<=3 ? s.grade : '');
+  return s.cls ? s.grade+' '+s.clsLabel : '';
+}
+function unitOrder(k){
+  const g=P.GRADES.indexOf(k.slice(0,2)); const c=k.match(/([A-Z])コース/); const n=k.match(/(\d+)組/); const a=k.match(/ ([A-Z])組/);
+  return (g>0?g:0)*10000 + (c? (COURSE_ORDER.indexOf(c[1])+1)*100 : 0) + (n? +n[1] : a? a[1].charCodeAt(0) : 0) + (k.startsWith('中学')? -1 : 0);
+}
+function unitStats(arr, latestOrder){
+  const g = groupStats(arr);
+  let first=0, firstOk=0; const att=[];
+  arr.forEach(s=>{ const seen={}; s.exams.forEach(e=>{ if(seen[e.lvl]==='done') return; seen[e.lvl]=(seen[e.lvl]||0)+1; if(seen[e.lvl]===1){ first++; if(e.pass) firstOk++; } if(e.pass){ att.push(seen[e.lvl]); seen[e.lvl]='done'; } }); });
+  const lat = arr.flatMap(s=>s.exams.filter(e=>e.order===latestOrder));
+  const sk={}; ['R','L','W','S'].forEach(k=>{ const v=[]; arr.forEach(s=>{ const e=[...s.exams].reverse().find(e=>e[k]!=null); if(e) v.push(e[k]); }); sk[k]=mean(v); sk[k+'n']=v.length; });
+  const courses={}; arr.forEach(s=>{ if(s.course) courses[s.course]=(courses[s.course]||0)+1; });
+  const mainCourse = Object.entries(courses).sort((a,b)=>b[1]-a[1])[0];
+  return { ...g, firstRate:pct(firstOk,first), avgAtt:mean(att), latTake:pct(new Set(arr.filter(s=>s.exams.some(e=>e.order===latestOrder)).map(s=>s.id)).size, arr.length), latPass:pct(lat.filter(e=>e.pass).length, lat.length), ...sk, mainCourse: mainCourse? mainCourse[0] : '', courseMix:Object.keys(courses).length };
+}
+function renderClassCourse(F){
+  const latestOrder = Math.max(0, ...DATA.flatMap(s=>s.exams.map(e=>e.order)));
+  const latLab = latestOrder ? `${Math.floor(latestOrder/10)}年度第${latestOrder%10}回` : '';
+  const groups={}; F.forEach(s=>{ const k=unitKey(s); if(k) (groups[k]=groups[k]||[]).push(s); });
+  const keys = Object.keys(groups);
+  const excluded = F.filter(s=>!unitKey(s));
+  const noCls = [...new Set(excluded.map(s=>s.grade))];
+  $('#ccNote').innerHTML = `比較対象 <b>${keys.length}</b> 単位・${F.length - excluded.length}名。` + (ccUnit==='cls' && noCls.length ? ` <b>${noCls.join('・')}</b> はデータにクラスが入っていないため対象外です（${excluded.length}名）。` : '') + (ccUnit!=='cls' && excluded.length? ` コースが不明な ${excluded.length}名は対象外。`:'') + ' 学年が違う単位どうしは在籍期間が違うので、学年を1つに絞るか「1年あたり上昇」で比べるのがおすすめです。';
+  $('#ccTitle').textContent = ({cls:'クラス別',course:'コース別',gcourse:'学年×コース別'})[ccUnit] + 'の比較表';
+  let rows = keys.map(k=>({k, ...unitStats(groups[k], latestOrder)}));
+  const cols=[['k',({cls:'クラス',course:'コース',gcourse:'学年×コース'})[ccUnit],'l'],['n','人数'],['entry','入学時'],['cur','現在'],['up','平均上昇'],['upYr','1年あたり'],['p3','3級以上'],['pj2','準2級以上'],['p2','2級以上'],['pj1','準1級以上'],['perHead','1人あたり受験'],['passRate','合格率(延べ)'],['firstRate','初回合格率'],['avgAtt','平均回数'],['latTake','直近回 受験率'],['latPass','直近回 合格率'],['R','R'],['L','L'],['W','W'],['S','S']];
+  rows.sort((a,b)=>{ if(ccSort.k==='k') return (unitOrder(a.k)-unitOrder(b.k))*(ccSort.asc?1:-1); const x=a[ccSort.k], y=b[ccSort.k]; if(x==null) return 1; if(y==null) return -1; return (x-y)*(ccSort.asc?1:-1); });
+  const pc=new Set(['p3','pj2','p2','pj1','passRate','firstRate','latTake','latPass']);
+  const lowGood=new Set(['avgAtt']);
+  const best={}; cols.slice(1).forEach(([k])=>{ if(k==='n'||k==='entry') return; const v=rows.map(r=>r[k]).filter(x=>x!=null); if(v.length>1) best[k]= lowGood.has(k)? Math.min(...v) : Math.max(...v); });
+  const fmt=(k,v)=> v==null? '<span class="muted">—</span>' : pc.has(k)? v.toFixed(1)+'%' : (k==='up'||k==='upYr')? (v>=0?'+':'')+v.toFixed(2) : ['R','L','W','S'].includes(k)? v.toFixed(0) : k==='n'? v : v.toFixed(2);
+  const label = r => esc(r.k) + (ccUnit==='cls' && r.mainCourse ? ` <span class="muted" style="font-size:11px">${esc(r.mainCourse)}${r.courseMix>1?'ほか':''}</span>`:'');
+  $('#tCC').innerHTML = `<thead><tr>${cols.map(([k,l,a])=>`<th class="sortable ${a||''} ${ccSort.k===k?'sorted'+(ccSort.asc?' asc':''):''}" data-k="${k}" ${k.startsWith('lat')?`title="${latLab}"`:''}>${l}</th>`).join('')}<th></th></tr></thead><tbody>` +
+    rows.map(r=>`<tr>${cols.map(([k,,a])=>`<td class="${a||''}">${k==='k'?label(r): (best[k]!=null && r[k]===best[k] ? `<b>${fmt(k,r[k])}</b>` : fmt(k,r[k]))}</td>`).join('')}<td><button class="btn small" data-drill="${esc(r.k)}">生徒</button></td></tr>`).join('') + '</tbody>';
+  $$('#tCC th.sortable').forEach(th=>th.onclick=()=>{ const k=th.dataset.k; ccSort={k, asc: ccSort.k===k? !ccSort.asc : k==='k' || lowGood.has(k)}; render(); });
+  $$('#tCC [data-drill]').forEach(b=>b.onclick=()=>drillTo(b.dataset.drill, groups[b.dataset.drill]));
+
+  // 構成
+  const ordered = [...rows].sort((a,b)=>unitOrder(a.k)-unitOrder(b.k));
+  const uk = ordered.map(r=>r.k);
+  const hgt = Math.max(300, uk.length*30+70);
+  $('#ccLvWrap').style.height = hgt+'px'; $('#ccSkWrap').style.height = hgt+'px';
+  const lvs = LV_ORDER.filter(l=>F.some(s=>s.currentLevel===l));
+  $('#ccLvLegend').innerHTML = legendHTML(lvs.map(l=>[l,lvColor(l)]));
+  const cnt = uk.map(k=>{ const a=groups[k].filter(s=>s.currentLevel); return {n:a.length, c:Object.fromEntries(lvs.map(l=>[l,a.filter(s=>s.currentLevel===l).length]))}; });
+  mk('cCCLevel', { type:'bar', data:{ labels:uk, datasets: lvs.map(l=>({ label:l, data:cnt.map(c=>pct(c.c[l],c.n)), raw:cnt.map(c=>c.c[l]), backgroundColor:lvColor(l), borderColor:css('--surface'), borderWidth:{right:2,left:0,top:0,bottom:0}, barThickness:18 })) },
+    options: baseOpts({ indexAxis:'y', scales:{ x:{stacked:true,max:100,grid:{color:css('--line')},ticks:{color:css('--ink-2'),callback:v=>v+'%'},border:{display:false}}, y:{stacked:true,grid:{display:false},ticks:{color:css('--ink-2'),font:{size:11}}} },
+      plugins:{...baseOpts().plugins, tooltip:{...baseOpts().plugins.tooltip, callbacks:{ label:c=>` ${c.dataset.label}：${c.dataset.raw[c.dataIndex]}名（${(c.raw||0).toFixed(1)}%）` } } } }) });
+  // 技能
+  const sk=[['R','Reading','--s1'],['L','Listening','--s2'],['W','Writing','--s3'],['S','Speaking','--s4']];
+  $('#ccSkLegend').innerHTML = legendHTML(sk.map(s=>[s[1],css(s[2])]));
+  const byK = Object.fromEntries(rows.map(r=>[r.k,r]));
+  mk('cCCSkill', { type:'bar', data:{ labels:uk, datasets: sk.map(([k,l,v])=>({ label:l, data:uk.map(u=>byK[u][k]), backgroundColor:css(v), borderRadius:3, borderSkipped:'start', barThickness:5 })) },
+    options: baseOpts({ indexAxis:'y', scales:{ x:{beginAtZero:false, grid:{color:css('--line')},ticks:{color:css('--ink-2')},border:{display:false}}, y:{grid:{display:false},ticks:{color:css('--ink-2'),font:{size:11}}} },
+      plugins:{...baseOpts().plugins, tooltip:{...baseOpts().plugins.tooltip, mode:'index', callbacks:{ label:c=>` ${c.dataset.label}：${c.raw==null?'—':c.raw.toFixed(0)}（${byK[uk[c.dataIndex]][sk[c.datasetIndex][0]+'n']}名）` } } } }) });
+  // 到達率ヒートマップ
+  const rs=$('#ccReachLv'); if(!rs.options.length){ rs.innerHTML=['3級','準2級','2級','準1級'].map(l=>`<option ${l==='準2級'?'selected':''}>${l}</option>`).join(''); rs.onchange=render; }
+  const thr=RANK[rs.value], xs=[1,2,3,4,5,6].filter(g=>uk.some(k=>groups[k].some(s=>s.gi>=g)));
+  const heat = p => p==null? 'var(--heat0)' : p<15? 'var(--heat1)' : p<35? 'var(--heat2)' : p<60? 'var(--heat3)' : 'var(--heat4)';
+  const hink = p => p>=60 ? 'var(--heat4-ink)' : p>=35 ? '#fff' : 'var(--ink)';
+  $('#tCCReach').innerHTML = `<thead><tr><th class="l">${cols[0][1]}</th>${xs.map(g=>`<th style="text-align:center">${GR[g]}末</th>`).join('')}</tr></thead><tbody>` +
+    uk.map(k=>`<tr><td class="l">${esc(k)}</td>${xs.map(g=>{ const p=reachAt(groups[k],g,thr,5); return p? `<td style="background:${heat(p.v)};color:${hink(p.v)}"><span class="n">${p.v.toFixed(0)}%${p.partial?'＊':''}</span><span class="p">${p.n}名</span></td>` : '<td><span class="muted">·</span></td>'; }).join('')}</tr>`).join('') + '</tbody>';
+  // 級別回数
+  const lvA = ['5級','4級','3級','準2級','準2級プラス','2級','準1級'].filter(l=>F.some(s=>s.exams.some(e=>e.lvl===l)));
+  $('#tCCAtt').innerHTML = `<thead><tr><th class="l">${cols[0][1]}</th>${lvA.map(l=>`<th style="text-align:center">${l}</th>`).join('')}</tr></thead><tbody>` +
+    uk.map(k=>`<tr><td class="l">${esc(k)}</td>${lvA.map(l=>{ const a=attemptStats(groups[k],l); if(!a.takers) return '<td><span class="muted">·</span></td>'; const pr=pct(a.passers,a.takers);
+      return `<td style="background:${heat(pr)};color:${hink(pr)}" title="受験${a.takers}名・合格${a.passers}名"><span class="n">${a.attempts.length? mean(a.attempts).toFixed(2)+'回':'—'}</span><span class="p">${pr.toFixed(0)}%（${a.passers}/${a.takers}）</span></td>`; }).join('')}</tr>`).join('') + '</tbody>';
+}
+function drillTo(k, arr){
+  if(!arr || !arr.length) return;
+  const s0=arr[0];
+  state.grades = new Set([...new Set(arr.map(s=>s.gi))]);
+  state.course = ccUnit==='cls' ? '' : (s0.course||'');
+  state.cls = ccUnit==='cls' ? k : '';
+  buildFilters();
+  $$('#tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==='st')); state.tab='st';
+  $$('section.tab').forEach(x=>x.classList.toggle('on', x.id==='t-st'));
+  render(); window.scrollTo({top:0});
 }
 
 let bgSort = {k:'n', asc:false};
