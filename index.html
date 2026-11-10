@@ -624,7 +624,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // クラス未割当（学年全員が同一値）の学年はクラスを空に
     const byG = {};
     list.forEach(s => (byG[s.gi] = byG[s.gi] || []).push(s));
-    Object.values(byG).forEach(arr => { const set = new Set(arr.map(s => s.cls)); if (set.size === 1 && arr.length > 50) arr.forEach(s => s.cls = ''); });
+    Object.values(byG).forEach(arr => {
+      const set = new Set(arr.map(s => s.cls)); if (!(set.size === 1 && arr.length > 50)) return;
+      // クラス列が全員同じ値で、「番号」列が少数の値（各15名以上）に分かれている場合は、番号列がクラスと判断
+      const cnt = {}; arr.forEach(s => { if (s.no != null) cnt[s.no] = (cnt[s.no] || 0) + 1; });
+      const vals = Object.values(cnt);
+      if (vals.length >= 2 && vals.length <= 15 && Math.min(...vals) >= 15 && vals.reduce((a, b) => a + b, 0) >= arr.length * 0.9) arr.forEach(s => { s.cls = s.no != null ? String(s.no) : ''; s.no = null; s.clsFromNo = true; });
+      else arr.forEach(s => s.cls = '');
+    });
     for (const s of list) {
       if (!s.fyBase) s.fyBase = curFY;
       s.alumni = s.fyBase < curFY;               // 過去年度の名簿（卒業生など）
