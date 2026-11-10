@@ -207,6 +207,11 @@ input.search{border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;b
 .bk-grid{display:grid;grid-template-columns:110px 1fr;gap:10px 14px;align-items:start;font-size:13px}
 .bk-grid>label{color:var(--ink-2);padding-top:3px;font-weight:600}
 .bk-grid textarea{width:100%;min-height:54px;border:1px solid var(--line-2);border-radius:8px;padding:6px 8px;background:var(--surface);font:inherit}
+.dist{display:flex;height:12px;width:160px;border-radius:3px;overflow:hidden;background:var(--surface-2)}
+.dist i{display:block;height:100%;border-right:1px solid var(--surface)}
+table.t tr.grp td{background:var(--surface-2);font-weight:700;color:var(--ink)}
+table.t tr.sel td{background:var(--accent-soft)}
+.cmp-legend i{width:12px;height:12px}
 .tablefoot{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px}
 </style>
 </head>
@@ -287,6 +292,21 @@ input.search{border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;b
       <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3>比較する単位</h3><div class="sub">上部のフィルタ（学年・入学区分など）を掛けた生徒を、選んだ単位で並べて比較します</div></div>
         <div class="ctrl"><div class="chips" id="ccUnit"><button class="chip on" data-u="cls">クラス</button><button class="chip" data-u="course">コース</button><button class="chip" data-u="gcourse">学年×コース</button></div></div></div>
         <div class="callout" id="ccNote" style="margin-top:4px"></div></div>
+      <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3 id="lsTitle">全クラスの取得状況一覧</h3><div class="sub">各行が1つの単位（学年ごとに小計）。左のチェックで最大6つまで選ぶと、下に比較が表示されます。上部の学年フィルタを「全学年」にすると全学年の一覧になります</div></div>
+        <div class="ctrl"><label class="muted" style="font-size:12px">級の欄</label><select id="lsMode"><option value="pct">割合（%）</option><option value="n">人数</option></select><button class="btn small" id="lsClear">選択をクリア</button><button class="btn small" data-csv="tList">CSV</button></div></div>
+        <div class="legend" id="lsLegend"></div>
+        <div class="scroll" style="max-height:620px"><table class="t" id="tList"></table></div>
+        <div class="hint">「現在の級」は各生徒がいま持っている最上位の級。色の濃さは同じ列の中での割合の高さ。太字は同じ学年の中で最も高い値です。</div></div>
+      <div class="card" id="cmpCard" style="margin-bottom:14px" hidden><div class="card-head"><div><h3 id="cmpTitle">選んだクラスの比較</h3><div class="sub">選んだ単位を横に並べて比較。比較表の「学年全体」は、選んだ単位と同じ学年の全体です</div></div><div class="ctrl"><button class="btn small" data-csv="tCmpKpi">CSV</button></div></div>
+        <div class="legend" id="cmpLegend"></div>
+        <div class="grid g2">
+          <div><div class="sub" style="margin:0 0 4px">現在の取得級の構成</div><div class="legend" id="cmpLvLegend"></div><div class="chart" id="cmpLvWrap"><canvas id="cCmpLevel"></canvas></div></div>
+          <div><div class="sub" style="margin:0 0 4px">各級以上を持っている割合</div><div class="chart"><canvas id="cCmpRate"></canvas></div></div>
+        </div>
+        <div class="grid g2" style="margin-top:14px">
+          <div><div class="sub" style="margin:0 0 4px">技能別の平均CSE（直近の受験）</div><div class="chart short"><canvas id="cCmpSkill"></canvas></div></div>
+          <div class="scroll" style="max-height:none"><table class="t" id="tCmpKpi"></table></div>
+        </div></div>
       <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3 id="fbTitle">分析フィードバック</h3><div class="sub">選んだ単位ごとに、取得状況・特徴と傾向・対策の提案・予測を自動でまとめます。比べる相手は同じ学年の全体（上部フィルタ内）です</div></div>
         <div class="ctrl"><select id="fbSort"><option value="order">並び：クラス・コース順</option><option value="need">並び：支援の優先度が高い順</option></select><button class="btn small" id="fbCopy">全文をコピー</button></div></div>
         <div class="fb-grid" id="fbGrid"></div>
@@ -1120,7 +1140,7 @@ function renderSkills(F){
 /* ---------- コース・クラス ---------- */
 let ccUnit='cls', ccSort={k:'k',asc:true};
 const COURSE_ORDER=['S','I','A','C','G'];
-$$('#ccUnit .chip').forEach(b=>b.onclick=()=>{ ccUnit=b.dataset.u; $$('#ccUnit .chip').forEach(x=>x.classList.toggle('on',x===b)); ccSort={k:'k',asc:true}; render(); });
+$$('#ccUnit .chip').forEach(b=>b.onclick=()=>{ ccUnit=b.dataset.u; ccSel.clear(); $$('#ccUnit .chip').forEach(x=>x.classList.toggle('on',x===b)); ccSort={k:'k',asc:true}; render(); });
 function unitKey(s){
   if (ccUnit==='course') return s.course ? s.course+'コース' : (s.gi<=3 ? '中学（コース区分なし）' : '');
   if (ccUnit==='gcourse') return s.course ? s.grade+' '+s.course+'コース' : (s.gi<=3 ? s.grade : '');
@@ -1227,6 +1247,88 @@ function renderFB(F, groups, keys, latestOrder){
 }
 function fallbackCopy(t, done){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); done(); }catch(e){} ta.remove(); }
 
+
+/* ---------- 全単位の取得状況一覧と比較 ---------- */
+const ccSel = new Set();
+const UNIT_J = () => ({cls:'クラス',course:'コース',gcourse:'学年×コース'})[ccUnit];
+function renderClassList(F, groups, keys, latestOrder){
+  const mode = $('#lsMode').value; $('#lsMode').onchange = render;
+  $('#lsClear').onclick = () => { ccSel.clear(); render(); };
+  [...ccSel].forEach(k=>{ if(!groups[k]) ccSel.delete(k); });
+  $('#lsTitle').textContent = `全${UNIT_J()}の取得状況一覧（${keys.length}${ccUnit==='cls'?'クラス':'件'}）`;
+  const lvs = LV_ORDER.filter(l=>F.some(s=>s.currentLevel===l));
+  $('#lsLegend').innerHTML = legendHTML(lvs.map(l=>[l,lvColor(l)])) + '<span class="muted">（分布バーの色）</span>';
+  const ths = [[3,'3級以上'],[4,'準2級以上'],[5,'2級以上'],[6,'準1級以上']];
+  const heat = p => p==null||p===0? 'transparent' : p<15? 'var(--heat1)' : p<35? 'var(--heat2)' : p<60? 'var(--heat3)' : 'var(--heat4)';
+  const hink = p => p>=60 ? 'var(--heat4-ink)' : p>=35 ? '#fff' : 'var(--ink)';
+  const stat = arr => { const known = arr.filter(s=>s.currentLevel); const c = Object.fromEntries(lvs.map(l=>[l, known.filter(s=>s.currentLevel===l).length]));
+    const both = arr.filter(s=>s.entryRank!=null&&s.currentRank!=null);
+    const lat = arr.filter(s=>s.exams.some(e=>e.order===latestOrder)).length;
+    return { n:arr.length, known:known.length, c, th: Object.fromEntries(ths.map(([r])=>[r, pct(known.filter(s=>s.currentRank>=r).length, known.length)])), up: mean(both.map(s=>s.currentRank-s.entryRank)), lat: pct(lat, arr.length) }; };
+  // 学年ごとにまとめる
+  const gOf = k => { if (ccUnit==='course') return 0; const g=new Set(groups[k].map(s=>s.gi)); return g.size===1 ? [...g][0] : 0; };
+  const ordered = [...keys].sort((a,b)=>unitOrder(a)-unitOrder(b));
+  const byG = {}; ordered.forEach(k=>{ const g=gOf(k); (byG[g]=byG[g]||[]).push(k); });
+  const gKeys = Object.keys(byG).map(Number).sort((a,b)=>a-b);
+  const cell = (cnt, n) => { const p = pct(cnt, n); return `<td style="background:${heat(p)};color:${hink(p)}">${cnt? (mode==='n'? cnt : p.toFixed(0)+'%') : '<span class="muted">·</span>'}</td>`; };
+  const distBar = st => `<div class="dist" title="${lvs.map(l=>l+' '+st.c[l]+'名').join(' / ')}">${lvs.map(l=> st.c[l]? `<i style="width:${100*st.c[l]/st.known}%;background:${lvColor(l)}"></i>`:'').join('')}</div>`;
+  const full = ccSel.size >= 6;
+  let html = `<thead><tr><th></th><th class="l">${UNIT_J()}</th><th>人数</th>${lvs.map(l=>`<th style="text-align:center">${l}</th>`).join('')}<th class="l">分布</th>${ths.map(t=>`<th>${t[1]}</th>`).join('')}<th>平均上昇</th><th>直近回 受験率</th></tr></thead><tbody>`;
+  for (const g of gKeys){
+    const ks = byG[g]; const sts = Object.fromEntries(ks.map(k=>[k, stat(groups[k])]));
+    const best = Object.fromEntries(ths.map(([r])=>[r, Math.max(...ks.map(k=>sts[k].th[r]??-1))]));
+    if (ks.length > 1 || g) { const all = F.filter(s=> g ? s.gi===g : true); const st = stat(all);
+      html += `<tr class="grp"><td></td><td class="l">${g? GR[g]+' 全体' : '全体'}</td><td>${st.n}</td>${lvs.map(l=>`<td style="text-align:center">${st.c[l]? (mode==='n'? st.c[l] : (100*st.c[l]/st.known).toFixed(0)+'%') : '·'}</td>`).join('')}<td class="l">${distBar(st)}</td>${ths.map(([r])=>`<td>${fp(st.th[r])}</td>`).join('')}<td>${st.up==null?'—':(st.up>=0?'+':'')+st.up.toFixed(2)}</td><td>${fp(st.lat)}</td></tr>`; }
+    for (const k of ks){ const st = sts[k], on = ccSel.has(k);
+      html += `<tr class="${on?'sel':''}"><td><input type="checkbox" data-k="${esc(k)}" ${on?'checked':''} ${!on&&full?'disabled':''}></td><td class="l" style="cursor:pointer" data-pick="${esc(k)}">${esc(k)}</td><td>${st.n}</td>${lvs.map(l=>cell(st.c[l], st.known)).join('')}<td class="l">${distBar(st)}</td>${ths.map(([r])=>`<td>${st.th[r]!=null && st.th[r]===best[r] && best[r]>0 && ks.length>1 ? '<b>'+fp(st.th[r])+'</b>' : fp(st.th[r])}</td>`).join('')}<td>${st.up==null?'—':(st.up>=0?'+':'')+st.up.toFixed(2)}</td><td>${fp(st.lat)}</td></tr>`; }
+  }
+  $('#tList').innerHTML = html + '</tbody>';
+  const toggle = k => { if (ccSel.has(k)) ccSel.delete(k); else if (ccSel.size < 6) ccSel.add(k); render(); };
+  $$('#tList input[type=checkbox]').forEach(cb=>cb.onchange=()=>toggle(cb.dataset.k));
+  $$('#tList [data-pick]').forEach(td=>td.onclick=()=>toggle(td.dataset.pick));
+  renderCompare(F, groups, latestOrder);
+}
+function renderCompare(F, groups, latestOrder){
+  const sel = [...ccSel].sort((a,b)=>unitOrder(a)-unitOrder(b));
+  $('#cmpCard').hidden = sel.length < 2;
+  if (sel.length < 2) return;
+  const pal = ['--s1','--s2','--s3','--s4','--s5','--s6'].map(css);
+  const colorOf = Object.fromEntries(sel.map((k,i)=>[k, pal[i]]));
+  $('#cmpTitle').textContent = `選んだ${UNIT_J()}の比較（${sel.length}件）`;
+  $('#cmpLegend').innerHTML = legendHTML(sel.map(k=>[`${k}（${groups[k].length}名）`, colorOf[k]]));
+  // 構成
+  const lvs = LV_ORDER.filter(l=>sel.some(k=>groups[k].some(s=>s.currentLevel===l)));
+  $('#cmpLvLegend').innerHTML = legendHTML(lvs.map(l=>[l,lvColor(l)]));
+  $('#cmpLvWrap').style.height = Math.max(220, sel.length*40+70)+'px';
+  const cnt = sel.map(k=>{ const a=groups[k].filter(s=>s.currentLevel); return {n:a.length, c:Object.fromEntries(lvs.map(l=>[l,a.filter(s=>s.currentLevel===l).length]))}; });
+  mk('cCmpLevel', { type:'bar', data:{ labels:sel, datasets: lvs.map(l=>({ label:l, data:cnt.map(c=>pct(c.c[l],c.n)), raw:cnt.map(c=>c.c[l]), backgroundColor:lvColor(l), borderColor:css('--surface'), borderWidth:{right:2,left:0,top:0,bottom:0}, barThickness:22 })) },
+    options: baseOpts({ indexAxis:'y', scales:{ x:{stacked:true,max:100,grid:{color:css('--line')},ticks:{color:css('--ink-2'),callback:v=>v+'%'},border:{display:false}}, y:{stacked:true,grid:{display:false},ticks:{color:css('--ink-2')}} },
+      plugins:{...baseOpts().plugins, tooltip:{...baseOpts().plugins.tooltip, callbacks:{ label:c=>` ${c.dataset.label}：${c.dataset.raw[c.dataIndex]}名（${(c.raw||0).toFixed(1)}%）` } } } }) });
+  // 到達率
+  const ths = [[3,'3級以上'],[4,'準2級以上'],[5,'2級以上'],[6,'準1級以上']];
+  const rate = (arr,r) => { const k=arr.filter(s=>s.currentRank!=null); return pct(k.filter(s=>s.currentRank>=r).length, k.length); };
+  mk('cCmpRate', { type:'bar', data:{ labels: ths.map(t=>t[1]), datasets: sel.map(k=>({ label:k, data: ths.map(([r])=>rate(groups[k],r)), backgroundColor:colorOf[k], borderRadius:4, borderSkipped:'start', maxBarThickness:26 })) },
+    options: baseOpts({ scales:{ x:{grid:{display:false},ticks:{color:css('--ink-2')}}, y:{min:0,max:100,grid:{color:css('--line')},ticks:{color:css('--ink-2'),callback:v=>v+'%'},border:{display:false}} },
+      plugins:{...baseOpts().plugins, tooltip:{...baseOpts().plugins.tooltip, callbacks:{ label:c=>` ${c.dataset.label}：${c.raw==null?'—':c.raw.toFixed(1)+'%'}` } } } }) });
+  // 技能
+  const st = Object.fromEntries(sel.map(k=>[k, unitStats(groups[k], latestOrder)]));
+  const skl = [['R','Reading'],['L','Listening'],['W','Writing'],['S','Speaking']];
+  mk('cCmpSkill', { type:'bar', data:{ labels: skl.map(x=>x[1]), datasets: sel.map(k=>({ label:k, data: skl.map(([x])=>st[k][x]), backgroundColor:colorOf[k], borderRadius:4, borderSkipped:'start', maxBarThickness:22 })) },
+    options: baseOpts({ scales:{ x:{grid:{display:false},ticks:{color:css('--ink-2')}}, y:{beginAtZero:false,grid:{color:css('--line')},ticks:{color:css('--ink-2')},border:{display:false}} },
+      plugins:{...baseOpts().plugins, tooltip:{...baseOpts().plugins.tooltip, callbacks:{ label:c=>` ${c.dataset.label}：${c.raw==null?'—':c.raw.toFixed(0)}` } } } }) });
+  // 指標の比較表（学年全体つき）
+  const gs = new Set(sel.flatMap(k=>groups[k].map(s=>s.gi)));
+  const refArr = F.filter(s=>gs.has(s.gi)); const ref = unitStats(refArr, latestOrder);
+  const refLab = gs.size===1 ? GR[[...gs][0]]+'全体' : '同じ学年の全体';
+  const pred = arr => { const gi=Math.max(...arr.map(s=>s.gi)); if(gi>=6) return null; const r=predMean(arr,6, gi<=3?4:5); return r? r.v : null; };
+  const M = [['n','人数','n'],['entry',BL()+'（級スコア）','f2'],['cur','現在（級スコア）','f2'],['up','平均上昇','sgn'],['upYr','1年あたり上昇','sgn'],['p3','3級以上','p'],['pj2','準2級以上','p'],['p2','2級以上','p'],['pj1','準1級以上','p'],['perHead','1人あたり受験','f2'],['passRate','合格率(延べ)','p'],['firstRate','初回合格率','p'],['avgAtt','平均回数（少ないほど良い）','f2'],['latTake','直近回 受験率','p'],['R','Reading','i'],['L','Listening','i'],['W','Writing','i'],['S','Speaking','i'],['pred','高3末の予測（中学は準2級・高校は2級以上）','p']];
+  const vals = k => ({...st[k], pred: pred(groups[k])}); const refV = {...ref, pred: pred(refArr)};
+  const fmtV = (t,v) => v==null||isNaN(v)? '—' : t==='p'? v.toFixed(1)+'%' : t==='sgn'? (v>=0?'+':'')+v.toFixed(2) : t==='i'? v.toFixed(0) : t==='n'? v : v.toFixed(2);
+  $('#tCmpKpi').innerHTML = `<thead><tr><th class="l">指標</th>${sel.map(k=>`<th><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${colorOf[k]};margin-right:4px"></span>${esc(k)}</th>`).join('')}<th class="muted">${refLab}</th></tr></thead><tbody>` +
+    M.map(([key,lab,t])=>{ const vs = sel.map(k=>vals(k)[key]); const ok = vs.filter(v=>v!=null&&!isNaN(v)); const best = key==='n'||key==='entry'? null : key==='avgAtt'? Math.min(...ok) : Math.max(...ok);
+      return `<tr><td class="l">${lab}</td>${vs.map(v=>`<td>${best!=null && v===best && ok.length>1 && !(best===0 && key!=='avgAtt') && new Set(ok).size>1 ? '<b>'+fmtV(t,v)+'</b>' : fmtV(t,v)}</td>`).join('')}<td class="muted">${fmtV(t,refV[key])}</td></tr>`; }).join('') + '</tbody>';
+}
+
 function renderClassCourse(F){
   const latestOrder = Math.max(0, ...DATA.flatMap(s=>s.exams.map(e=>e.order)));
   const latLab = latestOrder ? `${Math.floor(latestOrder/10)}年度第${latestOrder%10}回` : '';
@@ -1237,6 +1339,7 @@ function renderClassCourse(F){
   $('#ccNote').innerHTML = `比較対象 <b>${keys.length}</b> 単位・${F.length - excluded.length}名。` + (ccUnit==='cls' && noCls.length ? ` <b>${noCls.join('・')}</b> はデータにクラスが入っていないため対象外です（${excluded.length}名）。` : '') + (ccUnit!=='cls' && excluded.length? ` コースが不明な ${excluded.length}名は対象外。`:'') + ' 学年が違う単位どうしは在籍期間が違うので、学年を1つに絞るか「1年あたり上昇」で比べるのがおすすめです。';
   $('#ccTitle').textContent = ({cls:'クラス別',course:'コース別',gcourse:'学年×コース別'})[ccUnit] + 'の比較表';
   let rows = keys.map(k=>({k, ...unitStats(groups[k], latestOrder)}));
+  renderClassList(F, groups, keys, latestOrder);
   renderFB(F, groups, keys, latestOrder);
   const cols=[['k',({cls:'クラス',course:'コース',gcourse:'学年×コース'})[ccUnit],'l'],['n','人数'],['entry',BL()],['cur','現在'],['up','平均上昇'],['upYr','1年あたり'],['p3','3級以上'],['pj2','準2級以上'],['p2','2級以上'],['pj1','準1級以上'],['perHead','1人あたり受験'],['passRate','合格率(延べ)'],['firstRate','初回合格率'],['avgAtt','平均回数'],['latTake','直近回 受験率'],['latPass','直近回 合格率'],['R','R'],['L','L'],['W','W'],['S','S']];
   rows.sort((a,b)=>{ if(ccSort.k==='k') return (unitOrder(a.k)-unitOrder(b.k))*(ccSort.asc?1:-1); const x=a[ccSort.k], y=b[ccSort.k]; if(x==null) return 1; if(y==null) return -1; return (x-y)*(ccSort.asc?1:-1); });
