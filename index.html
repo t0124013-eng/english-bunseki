@@ -13,7 +13,8 @@
   --accent:#2a78d6; --accent-soft:#e3eefb;
   --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300;
   --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
-  --lv0:#cfcec8; --lv1:#86b6ef; --lv2:#6da7ec; --lv3:#5598e7; --lv4:#3987e5; --lv45:#2a78d6; --lv5:#256abf; --lv6:#184f95; --lv7:#0d366b;
+  --lv0:#cfcec8; --lv1:#f2c94c; --lv2:#f0883e; --lv3:#c63d5d; --lv4:#8e4fa8; --lv45:#c58ae0; --lv5:#1f9e89; --lv6:#2a78d6; --lv7:#0f3d74;
+  --at1:#2a78d6; --at2:#86b6ef; --at3:#f0883e; --at4:#c63d5d; --at5:#1f9e89; --at6:#cfcec8;
   --heat0:#f0efec; --heat1:#cde2fb; --heat2:#86b6ef; --heat3:#3987e5; --heat4:#1c5cab; --heat4-ink:#fff;
   --shadow:0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.04);
   color-scheme:light;
@@ -24,7 +25,8 @@
     --ink:#f0efec; --ink-2:#c3c2b7; --ink-3:#8f8e86;
     --accent:#3987e5; --accent-soft:#1d2d43;
     --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
-    --lv0:#4a4a46; --lv1:#184f95; --lv2:#1c5cab; --lv3:#256abf; --lv4:#2a78d6; --lv45:#3987e5; --lv5:#5598e7; --lv6:#86b6ef; --lv7:#cde2fb;
+    --lv0:#55554f; --lv1:#e3bd3c; --lv2:#e07a35; --lv3:#c2456a; --lv4:#9a5cc4; --lv45:#d09ae8; --lv5:#23a98d; --lv6:#3d86e0; --lv7:#8cc0ff;
+    --at1:#3d86e0; --at2:#1d4f8c; --at3:#e07a35; --at4:#c2456a; --at5:#23a98d; --at6:#55554f;
     --heat0:#242422; --heat1:#1d3350; --heat2:#1c5cab; --heat3:#3987e5; --heat4:#86b6ef; --heat4-ink:#0b0b0b;
     color-scheme:dark;
   }
@@ -177,6 +179,22 @@ input.search{border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;b
   body.printing #printArea{display:block!important}
   #printArea .sheet{page-break-after:always;break-after:page}
 }
+.fb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:14px}
+@media (max-width:600px){.fb-grid{grid-template-columns:1fr}}
+.fb{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
+.fb-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.fb-h b{font-size:16px}
+.fb-badges{display:flex;gap:6px;flex-wrap:wrap}
+.fb-badge{font-size:12px;border-radius:8px;padding:3px 9px;background:var(--surface-2);border:1px solid var(--line)}
+.fb-badge b{font-size:14px}
+.fb-sec h5{margin:0 0 4px;font-size:12px;color:var(--accent);letter-spacing:.04em}
+.fb-sec ul{margin:0;padding-left:18px;font-size:13px;color:var(--ink-2)}
+.fb-sec li{margin:2px 0}
+.fb-sec li b{color:var(--ink)}
+.fb-plus{color:var(--good)}.fb-minus{color:var(--crit)}
+.fb-act li{list-style:none;margin-left:-18px;padding-left:18px;position:relative}
+.fb-act li::before{content:"→";position:absolute;left:0;color:var(--accent);font-weight:700}
+.fb-pred{font-size:12.5px;background:var(--accent-soft);border-radius:8px;padding:7px 10px;color:var(--ink-2)}
 .tablefoot{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px}
 </style>
 </head>
@@ -256,6 +274,10 @@ input.search{border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;b
       <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3>比較する単位</h3><div class="sub">上部のフィルタ（学年・入学区分など）を掛けた生徒を、選んだ単位で並べて比較します</div></div>
         <div class="ctrl"><div class="chips" id="ccUnit"><button class="chip on" data-u="cls">クラス</button><button class="chip" data-u="course">コース</button><button class="chip" data-u="gcourse">学年×コース</button></div></div></div>
         <div class="callout" id="ccNote" style="margin-top:4px"></div></div>
+      <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3 id="fbTitle">分析フィードバック</h3><div class="sub">選んだ単位ごとに、取得状況・特徴と傾向・対策の提案・予測を自動でまとめます。比べる相手は同じ学年の全体（上部フィルタ内）です</div></div>
+        <div class="ctrl"><select id="fbSort"><option value="order">並び：クラス・コース順</option><option value="need">並び：支援の優先度が高い順</option></select><button class="btn small" id="fbCopy">全文をコピー</button></div></div>
+        <div class="fb-grid" id="fbGrid"></div>
+        <div class="hint">自動生成の所見です。人数が少ない単位では、差が偶然のこともあります。クラスの差は入学時の級の違いも含むため、担任の評価ではなく支援の優先順位づけに使ってください。予測は先輩の推移をもとにした参考値です。</div></div>
       <div class="card"><div class="card-head"><div><h3 id="ccTitle">単位別の比較表</h3><div class="sub">各列で最も高い値を太字で表示。列見出しクリックで並べ替え、行の「生徒」で該当生徒の一覧へ</div></div><div class="ctrl"><button class="btn small" data-csv="tCC">CSV</button></div></div>
         <div class="scroll" style="max-height:none"><table class="t" id="tCC"></table></div>
         <div class="hint">初回合格率＝各級の1回目の受験で合格した割合（全級合計）。平均回数＝合格までに要した回数の平均（全級合計）。直近回＝読み込んだデータで最も新しい実施回。技能スコアは各生徒の直近の受験のCSE平均。</div></div>
@@ -278,9 +300,12 @@ input.search{border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;b
         <div class="scroll" style="max-height:none"><table class="t matrix" id="tMatrix"></table></div>
         <div class="callout" id="growthNote"></div></div>
       <div class="card" style="margin-top:14px"><div class="card-head"><div><h3>学年ごとの到達率の推移</h3><div class="sub">各学年の終わりまでに、選んだ級以上を持っていた生徒の割合（今年度の学年は第1回までの途中経過）</div></div>
-        <div class="ctrl"><label class="muted" style="font-size:12px">到達ライン</label><select id="reachLv"></select><label class="muted" style="font-size:12px">系列</label><select id="reachBy"><option value="grade">現在の学年</option><option value="entry">入学区分</option><option value="course">コース</option></select></div></div>
+        <div class="ctrl"><label class="muted" style="font-size:12px">到達ライン</label><select id="reachLv"></select><label class="muted" style="font-size:12px">系列</label><select id="reachBy"><option value="grade">現在の学年</option><option value="entry">入学区分</option><option value="course">コース</option></select><label class="toggle"><input type="checkbox" id="reachPred" checked> 予測を表示</label></div></div>
         <div class="legend" id="reachLegend"></div><div class="chart tall"><canvas id="cReach"></canvas></div>
         <div class="scroll" style="max-height:none;margin-top:10px"><table class="t" id="tReach"></table></div></div>
+      <div class="card" style="margin-top:14px"><div class="card-head"><div><h3>到達の予測（先輩の推移をもとにした参考値）</h3><div class="sub">先輩たちが「ある学年の終わりにこの級 → 次の学年の終わりにこの級」と進んだ割合を使い、今の生徒が中3末・高3末に各級以上を持っている見込みを計算</div></div><div class="ctrl"><button class="btn small" data-csv="tPred">CSV</button></div></div>
+        <div class="scroll" style="max-height:none"><table class="t" id="tPred"></table></div>
+        <div class="hint" id="predNote"></div></div>
       <div class="card" style="margin-top:14px"><div class="card-head"><div><h3>コース・クラス別の比較</h3><div class="sub">現在のフィルタ内で、コースまたはクラスごとに入学時と現在を比較</div></div><div class="ctrl"><select id="cmpBy"><option value="course">コース別</option><option value="cls">クラス別</option><option value="entry">入学区分別</option><option value="sex">性別</option></select><button class="btn small" data-csv="tCmp">CSV</button></div></div>
         <div class="scroll" style="max-height:none"><table class="t" id="tCmp"></table></div></div>
     </section>
@@ -510,7 +535,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       }
       students.push(s);
     }
-    return { gi, sheetName, ikkan: /一貫/.test(sheetName), students, nBlocks: Object.keys(blocks).length };
+    const sheetFY = Math.max(0, ...Object.values(blocks).map(b => b.fy));
+    students.forEach(st => st.fyBase = sheetFY);
+    return { gi, sheetName, ikkan: /一貫/.test(sheetName), students, nBlocks: Object.keys(blocks).length, sheetFY };
   }
 
 
@@ -559,7 +586,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     else if (noSecond && ex.r1 === '合格') ex.pass = true;
     else ex.pass = false;
     ex.stage = ex.pass ? '合格' : (ex.r2 === '不合格' ? '二次不合格' : (ex.r1 === '不合格' ? '一次不合格' : '二次結果なし'));
-    ex.egi = s.gi - (curFY - ex.fy);
+    ex.egi = s.gi - ((s.fyBase || curFY) - ex.fy);
     ex.order = ex.fy * 10 + ex.rd;
     ex.sortKey = ex.order + (ex.cbt ? 0.5 + (ex.date ? Number(ex.date.replace(/\//g, '')) % 10000 / 100000 : 0) : 0);
     ex.RL = (ex.R != null && ex.L != null) ? ex.R + ex.L : null;
@@ -582,6 +609,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       for (const [k, v] of Object.entries(s)) {
         if (k === 'exams') continue;
         if ((cur[k] === '' || cur[k] == null) && v !== '' && v != null) cur[k] = v;
+        if (k === 'fyBase' && v > (cur.fyBase || 0)) cur.fyBase = v;
       }
       const have = new Map(cur.exams.map(e => [e.fy + '-' + e.rd, e]));
       for (const e of s.exams) {
@@ -598,11 +626,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     list.forEach(s => (byG[s.gi] = byG[s.gi] || []).push(s));
     Object.values(byG).forEach(arr => { const set = new Set(arr.map(s => s.cls)); if (set.size === 1 && arr.length > 50) arr.forEach(s => s.cls = ''); });
     for (const s of list) {
+      if (!s.fyBase) s.fyBase = curFY;
+      s.alumni = s.fyBase < curFY;               // 過去年度の名簿（卒業生など）
+      s.doneGi = s.alumni ? s.gi : s.gi - 1;      // 1年分そろっている最後の学年
       s.exams.forEach(e => finalizeExam(e, s, curFY));
       s.exams.sort((a, b) => a.sortKey - b.sortKey);
       s.entry = s.gi <= 3 ? '中学入学' : (s.apply === '一貫' ? '一貫生（内進）' : '高校入学');
       s.clsLabel = s.cls ? (/^\d+$/.test(s.cls) ? s.cls + '組' : s.cls + '組') : '';
-      s.entryFY = s.gi <= 3 ? curFY - (s.gi - 1) : (s.entry === '一貫生（内進）' ? curFY - (s.gi - 1) : curFY - (s.gi - 4));
+      { const b = s.fyBase || curFY; s.entryFY = s.gi <= 3 ? b - (s.gi - 1) : (s.entry === '一貫生（内進）' ? b - (s.gi - 1) : b - (s.gi - 4)); }
       // 入学時の級（本校入学時点）
       if (s.entry === '高校入学') s.entryLevel = s.hsEntryLevel || s.admEiken || null;
       else s.entryLevel = s.jhsEntryLevel || null;
@@ -643,7 +674,71 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     });
   }
 
-  const API = { parseSheet, parseCbtSheet, CBT_HEAD, hsView, mergeAll, normLevel, LEVELS, RANK, LEVEL_BY_RANK, GRADES, rankAtGrade, clean };
+
+  // ===== 予測モデル：先輩の「学年末→次の学年末」の級の推移確率 =====
+  const STATES = [0, 1, 2, 3, 4, 4.5, 5, 6, 7];
+  const SI = r => { const i = STATES.indexOf(r); return i < 0 ? 0 : i; };
+  // 学年 g の終わりの級（g=0 は中学入学時、外部生は g=3 が高校入学時）
+  function stateAt(s, g) {
+    if (s.entry === '高校入学') { if (g < 3) return null; if (g === 3) return s.entryRank ?? null; }
+    else if (g === 0) return s.entryRank ?? null;
+    if (s.entry === '一貫生（内進）' && g <= 3 && !s.exams.some(e => e.egi <= 3) && s.entryRank == null) return null;
+    const r = rankAtGrade(s, g); return r < 0 ? null : r;
+  }
+  function buildModel(list) {
+    const N = STATES.length, steps = {};
+    for (let g = 0; g < 6; g++) {
+      const M = STATES.map(() => Array(N).fill(0)); let n = 0;
+      for (const s of list) {
+        if (s.doneGi < g + 1) continue;
+        const a = stateAt(s, g), b = stateAt(s, g + 1);
+        if (a == null || b == null) continue;
+        M[SI(a)][SI(Math.max(a, b))]++; n++;
+      }
+      steps[g] = { M, n };
+    }
+    // 不足する学年の推移は、近い学年の推移で代用
+    const model = { steps: {}, proxy: {} };
+    for (let g = 0; g < 6; g++) {
+      let src = g;
+      if (steps[g].n < 15) { for (const d of [1, -1, 2, -2, 3, -3]) { const h = g + d; if (h >= 0 && h < 6 && steps[h].n >= 15 && ((h >= 3) === (g >= 3) || d === -1 || d === 1)) { src = h; break; } } }
+      model.proxy[g] = src !== g ? src : null;
+      const M = steps[src].M, pooled = STATES.map((_, i) => { const row = Array(N).fill(0); for (let h = 0; h < 6; h++) steps[h].M[i].forEach((v, j) => row[j] += v); return row; });
+      model.steps[g] = M.map((row, i) => {
+        const n = row.reduce((a, b) => a + b, 0), pn = pooled[i].reduce((a, b) => a + b, 0), k = 6;
+        const out = row.map((v, j) => {
+          const local = n ? v / n : 0, pool = pn ? pooled[i][j] / pn : (j === i ? 1 : 0);
+          return n ? (v + k * pool) / (n + k) : pool;
+        });
+        const t = out.reduce((a, b) => a + b, 0); return out.map(v => v / t);
+      });
+      model.steps[g].n = steps[g].n;
+    }
+    return model;
+  }
+  // 生徒1人の予測：学年ごとの級の確率分布 { g: [p(状態)] }
+  function predictStudent(model, s, toG) {
+    toG = toG || 6;
+    let g0 = Math.min(s.doneGi, s.gi);
+    let st = stateAt(s, g0);
+    if (st == null) { // 入学時の級が不明なら、分かる直近の学年から
+      for (let g = g0; g >= 0 && st == null; g--) { st = stateAt(s, g); if (st != null) g0 = g; }
+      if (st == null) return null;
+    }
+    let dist = STATES.map(r => r === st ? 1 : 0);
+    const out = {}; out[g0] = dist.slice();
+    const floor = s.currentRank ?? -1;
+    for (let g = g0 + 1; g <= toG; g++) {
+      const M = model.steps[g - 1]; const nd = Array(STATES.length).fill(0);
+      dist.forEach((p, i) => M[i].forEach((q, j) => nd[j] += p * q));
+      if (g >= s.gi && floor >= 0) { let m = 0; nd.forEach((p, j) => { if (STATES[j] < floor) { m += p; nd[j] = 0; } }); nd[SI(floor)] += m; }
+      dist = nd; out[g] = dist.slice();
+    }
+    return out;
+  }
+  const probAtLeast = (dist, r) => dist ? dist.reduce((a, p, i) => a + (STATES[i] >= r ? p : 0), 0) : null;
+
+  const API = { buildModel, predictStudent, probAtLeast, stateAt, STATES, parseSheet, parseCbtSheet, CBT_HEAD, hsView, mergeAll, normLevel, LEVELS, RANK, LEVEL_BY_RANK, GRADES, rankAtGrade, clean };
   if (typeof module !== 'undefined') module.exports = API; else root.EikenParser = API;
 })(this);
 </script>
@@ -663,7 +758,7 @@ const mean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
 const median = a => { if(!a.length) return null; const b=[...a].sort((x,y)=>x-y), m=b.length>>1; return b.length%2?b[m]:(b[m-1]+b[m])/2; };
 const lvOf = s => LBR[s];
 
-let ALL = null, DATA = null, CUR_FY = 0, parsedSheets = [], loadedFiles = [], CBT = [], CBT_STAT = {m:0,u:0}, cbtDirty = false;
+let MODEL = null, PRED = new Map(), ALL = null, DATA = null, CUR_FY = 0, parsedSheets = [], loadedFiles = [], CBT = [], CBT_STAT = {m:0,u:0}, cbtDirty = false;
 const charts = {};
 const state = { grades:new Set(), entry:'', course:'', cls:'', sex:'', anon:false, tab:'ov', base:'school' };
 const BL = () => state.base==='hs' ? '高校入学時' : '入学時';
@@ -709,12 +804,15 @@ function rebuild(){
   const sheets = parsedSheets.map(p => ({...p, students: p.students.map(s => JSON.parse(JSON.stringify(s)))}));
   const r = P.mergeAll(sheets, CBT);
   ALL = r.students; CUR_FY = r.curFY; CBT_STAT = {m:r.cbtMatched, u:r.cbtUnmatched};
+  MODEL = P.buildModel(ALL); PRED = new Map();
+  ALL.forEach(st=>{ if(!st.alumni){ const d=P.predictStudent(MODEL, st, 6); if(d) PRED.set(st.id, d); } });
   applyView();
 }
 function applyView(){
-  DATA = state.base==='hs' ? P.hsView(ALL) : ALL;
+  DATA = (state.base==='hs' ? P.hsView(ALL) : ALL).filter(st=>!st.alumni);
   if (state.base==='hs') [...state.grades].forEach(g=>{ if(g<4) state.grades.delete(g); });
-  $('#fyLabel').textContent = `${CUR_FY}年度時点・${ALL.length}名・読込 ${loadedFiles.length}ファイル` + (CBT.length? `・CBT ${CBT_STAT.m}件`:'');
+  const nAl = ALL.filter(x=>x.alumni).length;
+  $('#fyLabel').textContent = `${CUR_FY}年度時点・${ALL.length-nAl}名` + (nAl? `（＋過去の名簿 ${nAl}名は予測にのみ使用）`:'') + `・読込 ${loadedFiles.length}ファイル` + (CBT.length? `・CBT ${CBT_STAT.m}件`:'');
   $$('#fBase .chip').forEach(b=>b.classList.toggle('on', b.dataset.b===state.base));
   $('#baseBanner').hidden = state.base!=='hs';
   buildFilters(); render();
@@ -764,7 +862,8 @@ function baseOpts(extra={}){
 function mk(id, cfg){ if (charts[id]) charts[id].destroy(); Chart.defaults.font.family = getComputedStyle(document.body).fontFamily; charts[id] = new Chart(document.getElementById(id), cfg); return charts[id]; }
 const legendHTML = items => items.map(([lab,col])=>`<span><i style="background:${col}"></i>${esc(lab)}</span>`).join('');
 const lvColor = l => css(LV_VAR[l]||'--lv0');
-const lvPill = l => l ? `<span class="lvpill" style="background:${lvColor(l)};color:${(RANK[l]>=4.5 && !matchMedia('(prefers-color-scheme: dark)').matches)||(RANK[l]>=6)?'#fff':'#0b0b0b'}">${l}</span>` : '<span class="muted">—</span>';
+const inkOn = hex => { const h=hex.replace('#',''); if(h.length<6) return '#0b0b0b'; const [r,g,b]=[0,2,4].map(i=>{ const c=parseInt(h.substr(i,2),16)/255; return c<=0.03928? c/12.92 : Math.pow((c+0.055)/1.055,2.4); }); const L=0.2126*r+0.7152*g+0.0722*b; return L>0.32? '#0b0b0b' : '#ffffff'; };
+const lvPill = l => l ? `<span class="lvpill" style="background:${lvColor(l)};color:${inkOn(lvColor(l))}">${l}</span>` : '<span class="muted">—</span>';
 
 /* ---------- 共通集計 ---------- */
 function levelsPresent(F){ const set=new Set(); F.forEach(s=>s.exams.forEach(e=>set.add(e.lvl))); return LV_ORDER.filter(l=>set.has(l)); }
@@ -806,6 +905,9 @@ function reachAt(arr, g, thr, minN){
   if (obs.length<minN) return null;
   return {v:pct(obs.filter(s=>P.rankAtGrade(s,g)>=thr).length, obs.length), n:obs.length, partial: g===Math.max(...arr.map(s=>s.gi))};
 }
+function predMean(arr, g, thr){ const v=[]; arr.forEach(s=>{ const d=PRED.get(s.id); if(d && d[g]) v.push(P.probAtLeast(d[g], thr)); }); return v.length? {v:100*mean(v), n:v.length} : null; }
+function modelNote(){ if(!MODEL) return ''; const px=Object.entries(MODEL.proxy).filter(([g,v])=>v!=null).map(([g,v])=>`${GR[+g]||'入学時'}→${GR[+g+1]}`);
+  return px.length? `※ ${px.join('・')} の推移は、1年分そろった先輩のデータがまだないため、近い学年の推移で代用しています（過去の卒業生の名簿を読み込むと精度が上がります）。` : ''; }
 /* ---------- 描画 ---------- */
 function render(){
   if(!DATA) return;
@@ -885,12 +987,17 @@ function renderGrowth(F){
   const palette = ['--s1','--s2','--s3','--s4','--s5','--s6'].map(css);
   const xs = state.base==='hs' ? [4,5,6] : [1,2,3,4,5,6];
   const series = gk.map((k,i)=>{ const arr=groups[k]; const pts = xs.map(g=>reachAt(arr,g,thr,5)); return {k, pts, color:palette[i]}; });
-  $('#reachLegend').innerHTML = legendHTML(series.map(s=>[`${s.k}（${groups[s.k].length}名）`, s.color])) + '<span class="muted">点線＝今年度（途中経過）</span>';
-  mk('cReach', { type:'line', data:{ labels: xs.map(g=>GR[g]+'末'), datasets: series.map(s=>({ label:s.k, data:s.pts.map(p=>p?p.v:null), meta:s.pts, borderColor:s.color, backgroundColor:s.color, borderWidth:2, pointRadius:4, pointHoverRadius:6, pointBorderColor:css('--surface'), pointBorderWidth:2, spanGaps:false,
-      segment:{ borderDash: ctx => s.pts[ctx.p1DataIndex]?.partial ? [5,4] : undefined } })) },
+  const predOn = by==='grade' && $('#reachPred').checked; $('#reachPred').onchange = render;
+  if (predOn) series.forEach(se=>{ const arr=groups[se.k], gi=Math.max(...arr.map(x=>x.gi));
+    se.pred = xs.map((g,i)=> g===gi-1 && se.pts[i] ? {v:se.pts[i].v, n:se.pts[i].n, anchor:true} : (g>=gi ? predMean(arr,g,thr) : null)); });
+  $('#reachLegend').innerHTML = legendHTML(series.map(s=>[`${s.k}（${groups[s.k].length}名）`, s.color])) + '<span class="muted">点線＝今年度（途中経過）' + (predOn? '・細い点線と白抜きの点＝予測（先輩の推移をもとにした参考値）':'') + '</span>';
+  const predSets = predOn ? series.filter(s=>s.pred && s.pred.some(p=>p&&!p.anchor)).map(s=>({ label:s.k+'（予測）', data:s.pred.map(p=>p?p.v:null), meta:s.pred, pred:true, borderColor:s.color, backgroundColor:css('--surface'), borderWidth:1.5, borderDash:[2,4], pointRadius:4, pointHoverRadius:6, pointBorderColor:s.color, pointBorderWidth:2, spanGaps:true })) : [];
+  mk('cReach', { type:'line', data:{ labels: xs.map(g=>GR[g]+'末'), datasets: [...predSets, ...series.map(s=>({ label:s.k, data:s.pts.map(p=>p?p.v:null), meta:s.pts, borderColor:s.color, backgroundColor:s.color, borderWidth:2, pointRadius:4, pointHoverRadius:6, pointBorderColor:css('--surface'), pointBorderWidth:2, spanGaps:false,
+      segment:{ borderDash: ctx => s.pts[ctx.p1DataIndex]?.partial ? [5,4] : undefined } }))] },
     options: baseOpts({ interaction:{mode:'index',intersect:false}, scales:{ x:{grid:{display:false},ticks:{color:css('--ink-2')}}, y:{min:0,max:100,grid:{color:css('--line')},ticks:{color:css('--ink-2'),callback:v=>v+'%'},border:{display:false}} },
-      plugins:{...baseOpts().plugins, tooltip:{...baseOpts().plugins.tooltip, callbacks:{ label:c=>{ const m=c.dataset.meta[c.dataIndex]; return m? ` ${c.dataset.label}：${m.v.toFixed(1)}%（${m.n}名中）${m.partial?' ※途中':''}`:''; } } } } }) });
-  $('#tReach').innerHTML = `<thead><tr><th class="l">系列</th>${xs.map(g=>`<th>${GR[g]}末</th>`).join('')}</tr></thead><tbody>` + series.map(s=>`<tr><td class="l">${esc(s.k)}</td>${s.pts.map(p=>`<td>${p?`${p.v.toFixed(1)}%<span class="muted" style="font-size:11px"> /${p.n}</span>`:'<span class="muted">—</span>'}</td>`).join('')}</tr>`).join('') + '</tbody>';
+      plugins:{...baseOpts().plugins, tooltip:{...baseOpts().plugins.tooltip, callbacks:{ label:c=>{ const m=c.dataset.meta[c.dataIndex]; if(!m || (c.dataset.pred && m.anchor)) return ''; return ` ${c.dataset.label}：${m.v.toFixed(1)}%（${m.n}名${c.dataset.pred?'の予測平均':'中'}）${m.partial?' ※途中':''}`; } } } } }) });
+  $('#tReach').innerHTML = `<thead><tr><th class="l">系列</th>${xs.map(g=>`<th>${GR[g]}末</th>`).join('')}</tr></thead><tbody>` + series.map(s=>`<tr><td class="l">${esc(s.k)}</td>${s.pts.map(p=>`<td>${p?`${p.v.toFixed(1)}%<span class="muted" style="font-size:11px"> /${p.n}</span>`:'<span class="muted">—</span>'}</td>`).join('')}</tr>` + (s.pred && s.pred.some(p=>p&&!p.anchor)? `<tr><td class="l muted">${esc(s.k)}（予測）</td>${s.pred.map(p=>`<td class="muted">${p&&!p.anchor? p.v.toFixed(1)+'%' : ''}</td>`).join('')}</tr>`:'')).join('') + '</tbody>';
+  renderPredTable(F);
 
   // 比較
   const cb = $('#cmpBy'); cb.onchange = render;
@@ -902,7 +1009,7 @@ function renderGrowth(F){
 
 function renderAttempts(F){
   const lv = levelsPresent(F); const stats = Object.fromEntries(lv.map(L=>[L,attemptStats(F,L)]));
-  const cats = [['1','1回目で合格','--lv6'],['2','2回目','--lv4'],['3','3回目','--lv2'],['4+','4回目以上','--lv1'],['上位級','上位級で取得','--s3'],['未合格','未合格（挑戦中）','--lv0']];
+  const cats = [['1','1回目で合格','--at1'],['2','2回目','--at2'],['3','3回目','--at3'],['4+','4回目以上','--at4'],['上位級','上位級で取得','--at5'],['未合格','未合格（挑戦中）','--at6']];
   $('#attLegend').innerHTML = legendHTML(cats.map(c=>[c[1],css(c[2])]));
   mk('cAttempts', { type:'bar', data:{ labels:lv, datasets: cats.map(([k,l,v])=>({ label:l, data:lv.map(L=>pct(stats[L].dist[k],stats[L].takers)), raw:lv.map(L=>stats[L].dist[k]), backgroundColor:css(v), borderColor:css('--surface'), borderWidth:{right:2,left:0,top:0,bottom:0}, barThickness:22 })) },
     options: baseOpts({ indexAxis:'y', scales:{ x:{stacked:true,max:100,grid:{color:css('--line')},ticks:{color:css('--ink-2'),callback:v=>v+'%'},border:{display:false}}, y:{stacked:true,grid:{display:false},ticks:{color:css('--ink-2')}} },
@@ -986,6 +1093,93 @@ function unitStats(arr, latestOrder){
   const mainCourse = Object.entries(courses).sort((a,b)=>b[1]-a[1])[0];
   return { ...g, firstRate:pct(firstOk,first), avgAtt:mean(att), latTake:pct(new Set(arr.filter(s=>s.exams.some(e=>e.order===latestOrder)).map(s=>s.id)).size, arr.length), latPass:pct(lat.filter(e=>e.pass).length, lat.length), ...sk, mainCourse: mainCourse? mainCourse[0] : '', courseMix:Object.keys(courses).length };
 }
+
+/* ---------- 分析フィードバック ---------- */
+const SKJ = {R:'Reading',L:'Listening',W:'Writing',S:'Speaking'};
+const ADVICE_SK = {
+  R:'Reading：語彙を毎日少しずつ積み上げ（単語アプリ等で10分）、長文を時間を計って解く練習を週1回。',
+  L:'Listening：音声を使ったシャドーイング・ディクテーションを短時間で毎日。授業の最初の5分に取り入れる。',
+  W:'Writing：英作文を月2回以上書かせて添削し、「意見→理由2つ→まとめ」の型を定着させる。',
+  S:'Speaking：二次の面接練習（音読・Q&A）を受験前に2回以上。ペアで質問し合う時間を授業内に。'
+};
+function fbFor(k, arr, ref, refLabel, latestOrder){
+  const u = unitStats(arr, latestOrder), r = unitStats(ref, latestOrder);
+  const hi = arr.some(s=>s.gi>=4);
+  const keys = hi ? [4,5] : [3,4]; if (hi && (r.pj1||0) >= 10) keys.push(6);
+  const pAt = (a,th) => pct(a.filter(s=>(s.currentRank??-1)>=th).length, a.filter(s=>s.currentRank!=null).length);
+  const dpt = (a,b) => a==null||b==null? null : a-b;
+  const fmtD = d => d==null? '' : `<span class="${d>=0?'fb-plus':'fb-minus'}">${d>=0?'+':'−'}${Math.abs(d).toFixed(1)}pt</span>`;
+  const status=[], trend=[], acts=[]; let need = 0;
+  // 取得状況
+  status.push(keys.map(th=>{ const a=pAt(arr,th), b=pAt(ref,th); return `${lvOf(th)}以上 <b>${fp(a)}</b>（${refLabel} ${fp(b)} ${fmtD(dpt(a,b))}）`; }).join('、'));
+  const dist = {}; arr.forEach(s=>{ if(s.currentLevel) dist[s.currentLevel]=(dist[s.currentLevel]||0)+1; });
+  const mode = Object.entries(dist).sort((a,b)=>b[1]-a[1])[0];
+  if (mode) status.push(`最も多いのは <b>${mode[0]}</b>（${mode[1]}名・${Math.round(100*mode[1]/arr.length)}%）。${BL()}の級スコア ${f2(u.entry)} → 現在 ${f2(u.cur)}`);
+  const d1 = dpt(pAt(arr,keys[0]), pAt(ref,keys[0])) || 0, d2 = dpt(pAt(arr,keys[1]), pAt(ref,keys[1])) || 0;
+  need -= (d1 + d2) / 2;
+  // 入口×伸び
+  const dE = (u.entry??0) - (r.entry??0), dG = (u.upYr??0) - (r.upYr??0);
+  if (u.upYr!=null && r.upYr!=null) {
+    if (dE >= 0.2 && dG <= -0.08) { trend.push(`入学時の級は${refLabel}より高い（${f2(u.entry)}）が、1年あたりの上昇が小さい（${f2(u.upYr)}／${refLabel} ${f2(r.upYr)}）。上位級で足踏みしている可能性`); acts.push('入口が高い分、伸びが鈍っている。1つ上の級への挑戦を早めに促し、面談で目標級を更新する。'); need += 4; }
+    else if (dE <= -0.2 && dG >= 0.08) trend.push(`入学時の級は${refLabel}より低い（${f2(u.entry)}）が、1年あたりの上昇は大きい（${f2(u.upYr)}／${f2(r.upYr)}）。<b>伸びている集団</b>`);
+    else if (dE <= -0.2 && dG <= -0.08) { trend.push(`入学時の級・1年あたりの上昇とも${refLabel}を下回る（入学時 ${f2(u.entry)}／上昇 ${f2(u.upYr)}）`); acts.push('まずは「次の1つの級」に全員が合格することを目標に。受験級を実力に合わせて設定し、基礎（語彙・リスニング）を固める。'); need += 8; }
+    else if (dG >= 0.12) trend.push(`1年あたりの上昇が ${f2(u.upYr)} と${refLabel}（${f2(r.upYr)}）を上回る。<b>伸びが大きい</b>`);
+    else if (dG <= -0.12) { trend.push(`1年あたりの上昇が ${f2(u.upYr)} と${refLabel}（${f2(r.upYr)}）を下回る`); need += 4; }
+  }
+  // 受験行動
+  const dT = dpt(u.latTake, r.latTake);
+  if (dT != null && dT <= -8) { trend.push(`直近回の受験率が <b>${fp(u.latTake)}</b> と${refLabel}（${fp(r.latTake)}）より低い`); acts.push('受験率を上げる：申込締切の2週間前にクラスで案内し、未申込の生徒に個別に声をかける。日程が合わない生徒にはS-CBTを紹介する。'); need += 6; }
+  else if (dT != null && dT >= 8) trend.push(`直近回の受験率が <b>${fp(u.latTake)}</b> と高く（${refLabel} ${fp(r.latTake)}）、受験の習慣がついている`);
+  const lastYear = latestOrder - 10;
+  const idle = arr.filter(s=> !s.exams.some(e=>e.order>=lastYear) && (s.currentRank??0) < keys[1]);
+  if (idle.length >= Math.max(3, arr.length*0.15)) { trend.push(`この1年間に一度も受けていない生徒が <b>${idle.length}名</b>（${keys[1]?lvOf(keys[1]):''}未満）`); acts.push(`1年以上受けていない${idle.length}名は、面談で目標級と受験時期を一緒に決める。パフォーマンスシートで現在地を見せると話しやすい。`); need += 3; }
+  // 合格効率・つまずき級
+  const dF = dpt(u.firstRate, r.firstRate);
+  if (dF != null && dF <= -10) { trend.push(`初回合格率が <b>${fp(u.firstRate)}</b>（${refLabel} ${fp(r.firstRate)}）と低い`); acts.push('初回合格率が低い：実力より高すぎる級の受験を避け、過去問や模試でCSEが合格ラインに届いてから受験させる。'); need += 3; }
+  else if (dF != null && dF >= 10) trend.push(`初回合格率が <b>${fp(u.firstRate)}</b> と高い（${refLabel} ${fp(r.firstRate)}）。受験級の選び方が合っている`);
+  let worst = null;
+  ['3級','準2級','2級','準1級'].forEach(L=>{ const a=attemptStats(arr,L), b=attemptStats(ref,L); if (a.takers<5 || b.takers<10) return; const d = pct(a.passers,a.takers) - pct(b.passers,b.takers); if (!worst || d < worst.d) worst = {L, d, a:pct(a.passers,a.takers), b:pct(b.passers,b.takers), n:a.takers-a.passers-a.dist['上位級']}; });
+  if (worst && worst.d <= -10) { trend.push(`<b>${worst.L}</b>で苦戦：受けた生徒の合格率 ${fp(worst.a)}（${refLabel} ${fp(worst.b)}）、未合格 ${worst.n}名`); acts.push(`${worst.L}対策：未合格の${worst.n}名を対象に、${worst.L}の過去問で弱い技能を確かめ、直前の対策講座や補習を設ける。`); need += 3; }
+  // 技能
+  const sk = ['R','L','W','S'].filter(x=>u[x]!=null && r[x]!=null && u[x+'n']>=5).map(x=>({x, d:u[x]-r[x]}));
+  if (sk.length) {
+    const lo = sk.reduce((a,b)=>a.d<=b.d?a:b), top = sk.reduce((a,b)=>a.d>=b.d?a:b);
+    if (lo.d <= -10) { trend.push(`技能では <b>${SKJ[lo.x]}</b> が${refLabel}より ${Math.abs(lo.d).toFixed(0)}点低い（直近の平均 ${u[lo.x].toFixed(0)}）`); acts.push(ADVICE_SK[lo.x]); need += 2; }
+    if (top.d >= 10 && top.x !== lo.x) trend.push(`<b>${SKJ[top.x]}</b> は${refLabel}より ${top.d.toFixed(0)}点高く、強み`);
+  }
+  // あと少し層
+  const near = arr.filter(s=>{ const e=s.exams[s.exams.length-1]; return e && e.stage==='一次不合格' && e.band1!=null && e.band1<0 && e.band1>=-3; });
+  if (near.length >= 2) { trend.push(`直近の受験で「あと少し」（一次バンド−1〜−3）だった生徒が <b>${near.length}名</b>`); acts.push(`あと少しで不合格だった${near.length}名を次回の重点フォロー対象に。弱い技能を1つに絞って補強すれば合格が見込める。`); }
+  if (!trend.length) trend.push(`主な指標は${refLabel}とほぼ同じ水準`);
+  // 予測
+  let pred = '';
+  const gi = Math.max(...arr.map(s=>s.gi));
+  if (gi < 6 && PRED.size) {
+    const tg = gi <= 3 ? [[3,keys[1]],[6,hi?5:4]] : [[6,keys[1]]];
+    const parts = tg.filter(([g])=>g>=gi).map(([g,th])=>{ const a=predMean(arr,g,th), b=predMean(ref,g,th); return a? `${GR[g]}末に${lvOf(th)}以上 <b>${a.v.toFixed(0)}%</b>（${refLabel}の見込み ${b? b.v.toFixed(0)+'%':'—'}）` : ''; }).filter(Boolean);
+    if (parts.length) { pred = '予測：このままのペースだと ' + parts.join('、') + '。';
+      const [g,th] = tg.filter(([g])=>g>=gi)[0]||[]; const a=g&&predMean(arr,g,th), b=g&&predMean(ref,g,th);
+      if (a && b && a.v - b.v <= -5) { acts.push(`予測では${GR[g]}末の${lvOf(th)}以上が${refLabel}を下回る見込み。今年度のうちに受験回数を増やし、早めに次の級へ進ませる。`); need += 3; } }
+  }
+  if (!acts.length) acts.push('大きな課題は見られない。うまくいっている取り組み（声かけ・課題・受験の段取り）を学年で共有し、上位級（' + lvOf(keys[keys.length-1]) + '以上）への挑戦者を増やす。');
+  return { k, n:arr.length, status, trend: trend.slice(0,5), acts: [...new Set(acts)].slice(0,4), pred, need, badges: keys.map(th=>({lab:lvOf(th)+'以上', v:pAt(arr,th), d:dpt(pAt(arr,th),pAt(ref,th))})) };
+}
+function renderFB(F, groups, keys, latestOrder){
+  const items = keys.map(k=>{ const arr=groups[k]; const gs=new Set(arr.map(s=>s.gi)); const ref=F.filter(s=>gs.has(s.gi)); const refLabel = gs.size===1 ? GR[[...gs][0]]+'全体' : '対象全体'; return fbFor(k, arr, ref, refLabel, latestOrder); });
+  if ($('#fbSort').value==='need') items.sort((a,b)=>b.need-a.need); else items.sort((a,b)=>unitOrder(a.k)-unitOrder(b.k));
+  $('#fbSort').onchange = render;
+  $('#fbTitle').textContent = ({cls:'クラス別',course:'コース別',gcourse:'学年×コース別'})[ccUnit] + 'の分析フィードバック';
+  $('#fbGrid').innerHTML = items.map(it=>`<div class="fb"><div class="fb-h"><b>${esc(it.k)}</b><span class="muted" style="font-size:12px">${it.n}名</span><div class="fb-badges" style="margin-left:auto">${it.badges.map(b=>`<span class="fb-badge">${b.lab} <b>${b.v==null?'—':b.v.toFixed(0)+'%'}</b> ${b.d==null?'':`<span class="${b.d>=0?'fb-plus':'fb-minus'}">${b.d>=0?'▲':'▼'}${Math.abs(b.d).toFixed(0)}</span>`}</span>`).join('')}</div></div>
+    <div class="fb-sec"><h5>取得状況</h5><ul>${it.status.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+    <div class="fb-sec"><h5>特徴・傾向</h5><ul>${it.trend.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+    <div class="fb-sec fb-act"><h5>対策の提案</h5><ul>${it.acts.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+    ${it.pred? `<div class="fb-pred">${it.pred}</div>`:''}</div>`).join('') || '<div class="muted">対象がありません</div>';
+  $('#fbCopy').onclick = () => { const txt = [...document.querySelectorAll('#fbGrid .fb')].map(el=>el.innerText.replace(/▲/g,'+').replace(/▼/g,'-')).join('\n\n――――――――\n\n');
+    const done = () => { $('#fbCopy').textContent='コピーしました'; setTimeout(()=>$('#fbCopy').textContent='全文をコピー',1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done)); else fallbackCopy(txt,done); };
+}
+function fallbackCopy(t, done){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); done(); }catch(e){} ta.remove(); }
+
 function renderClassCourse(F){
   const latestOrder = Math.max(0, ...DATA.flatMap(s=>s.exams.map(e=>e.order)));
   const latLab = latestOrder ? `${Math.floor(latestOrder/10)}年度第${latestOrder%10}回` : '';
@@ -996,6 +1190,7 @@ function renderClassCourse(F){
   $('#ccNote').innerHTML = `比較対象 <b>${keys.length}</b> 単位・${F.length - excluded.length}名。` + (ccUnit==='cls' && noCls.length ? ` <b>${noCls.join('・')}</b> はデータにクラスが入っていないため対象外です（${excluded.length}名）。` : '') + (ccUnit!=='cls' && excluded.length? ` コースが不明な ${excluded.length}名は対象外。`:'') + ' 学年が違う単位どうしは在籍期間が違うので、学年を1つに絞るか「1年あたり上昇」で比べるのがおすすめです。';
   $('#ccTitle').textContent = ({cls:'クラス別',course:'コース別',gcourse:'学年×コース別'})[ccUnit] + 'の比較表';
   let rows = keys.map(k=>({k, ...unitStats(groups[k], latestOrder)}));
+  renderFB(F, groups, keys, latestOrder);
   const cols=[['k',({cls:'クラス',course:'コース',gcourse:'学年×コース'})[ccUnit],'l'],['n','人数'],['entry',BL()],['cur','現在'],['up','平均上昇'],['upYr','1年あたり'],['p3','3級以上'],['pj2','準2級以上'],['p2','2級以上'],['pj1','準1級以上'],['perHead','1人あたり受験'],['passRate','合格率(延べ)'],['firstRate','初回合格率'],['avgAtt','平均回数'],['latTake','直近回 受験率'],['latPass','直近回 合格率'],['R','R'],['L','L'],['W','W'],['S','S']];
   rows.sort((a,b)=>{ if(ccSort.k==='k') return (unitOrder(a.k)-unitOrder(b.k))*(ccSort.asc?1:-1); const x=a[ccSort.k], y=b[ccSort.k]; if(x==null) return 1; if(y==null) return -1; return (x-y)*(ccSort.asc?1:-1); });
   const pc=new Set(['p3','pj2','p2','pj1','passRate','firstRate','latTake','latPass']);
@@ -1051,6 +1246,23 @@ function drillTo(k, arr){
   render(); window.scrollTo({top:0});
 }
 
+
+function renderPredTable(F){
+  const gs=[...new Set(F.map(s=>s.gi))].sort();
+  const cols = state.base==='hs' ? [[6,4],[6,5],[6,6]] : [[3,3],[3,4],[6,4],[6,5],[6,6]];
+  const head = cols.map(([g,r])=>`<th>${GR[g]}末<br>${lvOf(r)}以上</th>`).join('');
+  const rows = gs.map(gi=>{ const arr=F.filter(s=>s.gi===gi);
+    return `<tr><td class="l">${GR[gi]}（${arr.length}名）</td>` + cols.map(([g,r])=>{
+      if (g < gi || (g===gi-1)) { const a=reachAt(arr,g,r,5); return `<td>${a? a.v.toFixed(1)+'%<span class="muted" style="font-size:11px"> 実績</span>':'<span class="muted">—</span>'}</td>`; }
+      const p=predMean(arr,g,r); return `<td>${p? '<b>'+p.v.toFixed(1)+'%</b><span class="muted" style="font-size:11px"> 予測</span>' : '<span class="muted">—</span>'}</td>`; }).join('') + '</tr>'; });
+  // 先輩の実績（同じ時点）
+  const sen = cols.map(([g,r])=>{ const obs = ALL.filter(x=> x.doneGi>=g && P.stateAt(x,g)!=null && (g>3 || x.entry!=='高校入学'));
+    if (obs.length<10) return '<td class="muted">—</td>';
+    const v = obs.filter(x=>P.stateAt(x,g)>=r).length; return `<td class="muted">${(100*v/obs.length).toFixed(1)}%<span style="font-size:11px"> /${obs.length}名</span></td>`; });
+  $('#tPred').innerHTML = `<thead><tr><th class="l">現在の学年</th>${head}</tr></thead><tbody>${rows.join('')}<tr style="background:var(--surface-2)"><td class="l muted">先輩の実績（その時点を終えた生徒）</td>${sen.join('')}</tr></tbody>`;
+  $('#predNote').innerHTML = '予測は「先輩と同じペースで級が上がる」と仮定した参考値です。過去の学年で試したところ、学年全体の割合で ±5〜10ポイント程度の誤差がありました。指導の変化や受験回数が変われば結果も変わります。' + modelNote();
+}
+
 let bgSort = {k:'n', asc:false};
 function renderBackground(F){
   const dsel=$('#bgDim'); if(!dsel.options.length){ dsel.innerHTML = Object.entries(DIMS).map(([k,d])=>`<option value="${k}">${d.lab}</option>`).join(''); dsel.value='juku'; dsel.onchange=render; $('#bgMin').onchange=render;
@@ -1098,6 +1310,7 @@ function openStudent(s){
   $('#dSub').textContent = `学籍番号 ${s.id}・${s.entry}・${s.entryFY}年度入学`;
   const info=[['コース',s.course?s.course+'コース':'—'],[BL()+'の級',s.entryLevel||'不明'],['現在の級',s.currentLevel||'—'],['出身校',s.school||'—'],['塾',(s.juku? s.juku+' '+s.jukuRoom:'—')],['入試時の英検',s.admEiken||'—'],
     ['内申 5科／英語', s.naishin5!=null? `${s.naishin5}／${s.naishinEn??'—'}`:'—'],['偏差値 SS①／②', s.ss1!=null? `${s.ss1}／${s.ss2??'—'}`:'—'],['入試判定', s.finalJudge || s.bestResult || '—'],
+    ['卒業時（高3末）の見込み', (()=>{ const d=PRED.get(s.id); if(!d||!d[6]||s.gi>=6&&!d[6]) return '—'; return ['準2級','2級','準1級'].map(l=>`${l}以上 ${Math.round(100*P.probAtLeast(d[6],RANK[l]))}%`).join('／'); })()],
     ['中学入学前の級', s.jhsEntryLevel||'—'],['高校入学前の級', s.hsEntryLevel||'—'],['中学入試', s.jhsExamType? `${s.jhsExamRound} ${s.jhsExamType}`:'—']];
   const ex=s.exams;
   $('#dBody').innerHTML = `<div class="info">${info.map(([l,v])=>`<div><span>${l}</span>${esc(v)}</div>`).join('')}</div>
@@ -1262,7 +1475,7 @@ function sheetHTML(s){
     else hints.push(`前回より下がった技能があります。どの問題形式で失点したかを振り返りましょう。`); }
   if (last){ const lk = ['R','L','W'].filter(k=>last[k]!=null); if (lk.length>=2){ const hiK = lk.reduce((a,b)=>last[a]>=last[b]?a:b), loK = lk.reduce((a,b)=>last[a]<=last[b]?a:b); if (hiK!==loK) hints.push(`今回の強みは <b>${SKN[hiK]}（${last[hiK]}）</b>、伸ばしどころは <b>${SKN[loK]}（${last[loK]}）</b> です。`); } }
   if (tgt && th && tgtSum!=null) hints.push(tgtSum>=th[0] ? `${tgt}の一次合格基準（${th[0]}）を今回のスコアで上回っています。${th[1]? `二次（Speaking ${th[1]}）の準備を進めましょう。`:''}` : `目標の <b>${tgt}</b> 一次合格基準（${th[0]}）まで、あと <b>${th[0]-tgtSum}点</b>。1技能あたり約 ${Math.ceil((th[0]-tgtSum)/(RANK[tgt]<=2?2:3))}点です。`);
-  if (lastAny && !lastAny.pass && lastAny.band1!=null && lastAny.band1>=-3) hints.push(`前回の${lastAny.lvl}は <b>合格まであと少し（${esc(lastAny.b1)}）</b> でした。`);
+  if (lastAny && lastAny.stage==='一次不合格' && lastAny.band1!=null && lastAny.band1<0 && lastAny.band1>=-3) hints.push(`前回の${lastAny.lvl}は <b>合格まであと少し（${esc(lastAny.b1)}）</b> でした。`);
   const hist = s.exams.slice(-9).reverse();
   const now = new Date(); const made = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
   return `<div class="sheet">
