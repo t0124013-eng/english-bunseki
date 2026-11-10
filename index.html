@@ -180,7 +180,22 @@ input.search{border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;b
   body.printing #printArea{display:block!important}
   #printArea .sheet{page-break-after:always;break-after:page}
 }
-.fb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:14px}
+.fb-grid{display:grid;grid-template-columns:1fr;gap:8px}
+details.fb{padding:0;gap:0}
+details.fb>summary{list-style:none;cursor:pointer;padding:12px 16px;border-radius:12px}
+details.fb>summary::-webkit-details-marker{display:none}
+details.fb>summary:hover{background:var(--surface-2)}
+details.fb[open]>summary{border-bottom:1px solid var(--line);border-radius:12px 12px 0 0}
+details.fb .fb-body{padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px}
+.fb-caret{display:inline-block;width:18px;color:var(--accent);font-weight:700;transition:transform .15s}
+details.fb[open] .fb-caret{transform:rotate(90deg)}
+.fb-open-hint{font-size:12px;color:var(--accent);white-space:nowrap}
+details.fb[open] .fb-open-hint{display:none}
+.fb-need{font-size:11.5px;border-radius:999px;padding:1px 8px;font-weight:700;border:1px solid}
+.fb-need.hi{color:var(--crit);border-color:var(--crit)}
+.fb-need.mid{color:#b07800;border-color:#d9a100}
+.fb-need.lo{color:var(--good);border-color:var(--good)}
+.fb-top{font-size:12.5px;color:var(--ink-2);margin:4px 0 0 26px}
 @media (max-width:600px){.fb-grid{grid-template-columns:1fr}}
 .fb{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
 .fb-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
@@ -308,7 +323,7 @@ table.t tr.sel td{background:var(--accent-soft)}
           <div class="scroll" style="max-height:none"><table class="t" id="tCmpKpi"></table></div>
         </div></div>
       <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3 id="fbTitle">分析フィードバック</h3><div class="sub">選んだ単位ごとに、取得状況・特徴と傾向・対策の提案・予測を自動でまとめます。比べる相手は同じ学年の全体（上部フィルタ内）です</div></div>
-        <div class="ctrl"><select id="fbSort"><option value="order">並び：クラス・コース順</option><option value="need">並び：支援の優先度が高い順</option></select><button class="btn small" id="fbCopy">全文をコピー</button></div></div>
+        <div class="ctrl"><select id="fbSort"><option value="order">並び：クラス・コース順</option><option value="need">並び：支援の優先度が高い順</option></select><button class="btn small" id="fbOpenAll">すべて開く</button><button class="btn small" id="fbCloseAll">すべて閉じる</button><button class="btn small" id="fbCopy">全文をコピー</button></div></div>
         <div class="fb-grid" id="fbGrid"></div>
         <div class="hint">自動生成の所見です。人数が少ない単位では、差が偶然のこともあります。クラスの差は入学時の級の違いも含むため、担任の評価ではなく支援の優先順位づけに使ってください。予測は先輩の推移をもとにした参考値です。</div></div>
       <div class="card"><div class="card-head"><div><h3 id="ccTitle">単位別の比較表</h3><div class="sub">各列で最も高い値を太字で表示。列見出しクリックで並べ替え、行の「生徒」で該当生徒の一覧へ</div></div><div class="ctrl"><button class="btn small" data-csv="tCC">CSV</button></div></div>
@@ -1231,17 +1246,24 @@ function fbFor(k, arr, ref, refLabel, latestOrder){
   if (!acts.length) acts.push('大きな課題は見られない。うまくいっている取り組み（声かけ・課題・受験の段取り）を学年で共有し、上位級（' + lvOf(keys[keys.length-1]) + '以上）への挑戦者を増やす。');
   return { k, n:arr.length, status, trend: trend.slice(0,5), acts: [...new Set(acts)].slice(0,4), pred, need, badges: keys.map(th=>({lab:lvOf(th)+'以上', v:pAt(arr,th), d:dpt(pAt(arr,th),pAt(ref,th))})) };
 }
+const fbOpen = new Set();
 function renderFB(F, groups, keys, latestOrder){
   const items = keys.map(k=>{ const arr=groups[k]; const gs=new Set(arr.map(s=>s.gi)); const ref=F.filter(s=>gs.has(s.gi)); const refLabel = gs.size===1 ? GR[[...gs][0]]+'全体' : '対象全体'; return fbFor(k, arr, ref, refLabel, latestOrder); });
   if ($('#fbSort').value==='need') items.sort((a,b)=>b.need-a.need); else items.sort((a,b)=>unitOrder(a.k)-unitOrder(b.k));
   $('#fbSort').onchange = render;
   $('#fbTitle').textContent = ({cls:'クラス別',course:'コース別',gcourse:'学年×コース別'})[ccUnit] + 'の分析フィードバック';
-  $('#fbGrid').innerHTML = items.map(it=>`<div class="fb"><div class="fb-h"><b>${esc(it.k)}</b><span class="muted" style="font-size:12px">${it.n}名</span><div class="fb-badges" style="margin-left:auto">${it.badges.map(b=>`<span class="fb-badge">${b.lab} <b>${b.v==null?'—':b.v.toFixed(0)+'%'}</b> ${b.d==null?'':`<span class="${b.d>=0?'fb-plus':'fb-minus'}">${b.d>=0?'▲':'▼'}${Math.abs(b.d).toFixed(0)}</span>`}</span>`).join('')}</div></div>
-    <div class="fb-sec"><h5>取得状況</h5><ul>${it.status.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+  const needLv = n => n>=10 ? ['hi','支援優先度：高'] : n>=4 ? ['mid','支援優先度：中'] : ['lo','支援優先度：低'];
+  const strip = h => h.replace(/<[^>]+>/g,'');
+  $('#fbGrid').innerHTML = items.map(it=>{ const [nc,nl]=needLv(it.need); return `<details class="fb" data-k="${esc(it.k)}" ${fbOpen.has(it.k)?'open':''}><summary><div class="fb-h"><span class="fb-caret">▸</span><b>${esc(it.k)}</b><span class="muted" style="font-size:12px">${it.n}名</span><span class="fb-need ${nc}">${nl}</span><div class="fb-badges" style="margin-left:auto">${it.badges.map(b=>`<span class="fb-badge">${b.lab} <b>${b.v==null?'—':b.v.toFixed(0)+'%'}</b> ${b.d==null?'':`<span class="${b.d>=0?'fb-plus':'fb-minus'}">${b.d>=0?'▲':'▼'}${Math.abs(b.d).toFixed(0)}</span>`}</span>`).join('')}</div></div>
+    <div class="fb-top">${it.trend[0]? '要点：'+strip(it.trend[0]) : ''}　<span class="fb-open-hint">クリックで詳細を表示 ▾</span></div></summary>
+    <div class="fb-body"><div class="fb-sec"><h5>取得状況</h5><ul>${it.status.map(x=>`<li>${x}</li>`).join('')}</ul></div>
     <div class="fb-sec"><h5>特徴・傾向</h5><ul>${it.trend.map(x=>`<li>${x}</li>`).join('')}</ul></div>
     <div class="fb-sec fb-act"><h5>対策の提案</h5><ul>${it.acts.map(x=>`<li>${x}</li>`).join('')}</ul></div>
-    ${it.pred? `<div class="fb-pred">${it.pred}</div>`:''}</div>`).join('') || '<div class="muted">対象がありません</div>';
-  $('#fbCopy').onclick = () => { const txt = [...document.querySelectorAll('#fbGrid .fb')].map(el=>el.innerText.replace(/▲/g,'+').replace(/▼/g,'-')).join('\n\n――――――――\n\n');
+    ${it.pred? `<div class="fb-pred">${it.pred}</div>`:''}</div></details>`; }).join('') || '<div class="muted">対象がありません</div>';
+  $$('#fbGrid details.fb').forEach(d=>d.addEventListener('toggle', ()=>{ d.open? fbOpen.add(d.dataset.k) : fbOpen.delete(d.dataset.k); }));
+  $('#fbOpenAll').onclick = () => $$('#fbGrid details.fb').forEach(d=>d.open=true);
+  $('#fbCloseAll').onclick = () => $$('#fbGrid details.fb').forEach(d=>d.open=false);
+  $('#fbCopy').onclick = () => { const txt = items.map(it=>[`■ ${it.k}（${it.n}名）`, '【取得状況】', ...it.status.map(x=>'・'+strip(x)), '【特徴・傾向】', ...it.trend.map(x=>'・'+strip(x)), '【対策の提案】', ...it.acts.map(x=>'・'+strip(x)), ...(it.pred? ['【予測】'+strip(it.pred).replace(/^予測：/,'')]:[])].join('\n')).join('\n\n');
     const done = () => { $('#fbCopy').textContent='コピーしました'; setTimeout(()=>$('#fbCopy').textContent='全文をコピー',1500); };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done)); else fallbackCopy(txt,done); };
 }
