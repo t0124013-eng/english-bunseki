@@ -227,6 +227,13 @@ details.fb[open] .fb-open-hint{display:none}
 table.t tr.grp td{background:var(--surface-2);font-weight:700;color:var(--ink)}
 table.t tr.sel td{background:var(--accent-soft)}
 .cmp-legend i{width:12px;height:12px}
+.un-lv>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.un-lv>summary::-webkit-details-marker{display:none}
+.un-lv>summary:hover{background:var(--surface-2)}
+.un-lv[open]>summary{border-radius:10px 10px 0 0}
+.un-lv .un-body{border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:10px}
+.un-lv[open] .fb-caret{transform:rotate(90deg)}
+.cefr{display:inline-block;min-width:34px;text-align:center;border-radius:6px;padding:0 6px;font-size:12px;font-weight:700;background:var(--accent-soft);color:var(--accent)}
 .tablefoot{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px}
 </style>
 </head>
@@ -286,6 +293,7 @@ table.t tr.sel td{background:var(--accent-soft)}
       <button data-t="at">合格までの回数</button>
       <button data-t="sk">技能スコア</button>
       <button data-t="bg">入学時の属性</button>
+      <button data-t="un">大学入試活用</button>
       <button data-t="st">生徒一覧</button>
     </nav>
 
@@ -387,11 +395,39 @@ table.t tr.sel td{background:var(--accent-soft)}
 
     <!-- 属性 -->
     <section class="tab" id="t-bg">
+      <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3>塾・教室ごとの英語の強さ</h3><div class="sub">塾（または教室）ごとに、入学時の英語力・現在の級・技能スコア・伸びを比べます。学年や入学区分で水準が違うため、各生徒を「同じ学年・同じ入学区分の中での位置」に直して平均した偏差値（50が平均）で表します</div></div>
+        <div class="ctrl"><select id="jkUnit"><option value="room">塾の教室ごと</option><option value="juku">塾ごと</option></select><label class="muted" style="font-size:12px">最少人数</label><select id="jkMin"><option>3</option><option selected>5</option><option>10</option><option>20</option></select><label class="muted" style="font-size:12px">並び・グラフ</label><select id="jkMetric"><option value="all">英語力（総合）</option><option value="cur">現在の級</option><option value="skill">技能スコア</option><option value="entry">入学時の英語力</option><option value="up">入学後の伸び</option><option value="R">Reading</option><option value="L">Listening</option><option value="W">Writing</option><option value="S">Speaking</option><option value="n">人数</option></select><input class="search" id="jkSearch" placeholder="塾名・教室名で絞り込み" style="width:190px"><button class="btn small" data-csv="tJk">CSV</button></div></div>
+        <div class="chart tall" id="jkChartWrap"><canvas id="cJk"></canvas></div>
+        <div class="sortbar" id="jkSortBar" style="margin-top:12px"></div>
+        <div class="scroll" style="max-height:560px"><table class="t" id="tJk"></table></div>
+        <div class="hint">偏差値は 50＋10×（同じ学年・入学区分の平均との差 ÷ 標準偏差）の教室平均。英語力（総合）＝現在の級と技能スコアの平均。技能スコアは各生徒の直近の受験のCSE。行をクリックするとその塾・教室の生徒一覧へ移ります。人数が少ない教室は値がぶれやすいので、最少人数で調整してください。塾の名前・教室名は名簿の表記のまま（「校」「教室」の違いはそろえています）。「その他塾」などの名前のないものは除いています。</div></div>
       <div class="card"><div class="card-head"><div><h3>入学時の属性と英検の伸び</h3><div class="sub">属性ごとの入学時の級・現在の級・上昇幅など。列見出しクリックで並べ替え</div></div>
         <div class="ctrl"><label class="muted" style="font-size:12px">切り口</label><select id="bgDim"></select><label class="muted" style="font-size:12px">最少人数</label><select id="bgMin"><option>1</option><option>3</option><option selected>5</option><option>10</option><option>20</option></select><label class="muted" style="font-size:12px">グラフ指標</label><select id="bgMetric"></select><button class="btn small" data-csv="tBg">CSV</button></div></div>
         <div class="chart tall"><canvas id="cBg"></canvas></div>
         <div class="sortbar" id="bgSortBar" style="margin-top:12px"></div><div class="scroll"><table class="t" id="tBg"></table></div>
         <div class="hint">級スコア：5級=1, 4級=2, 3級=3, 準2級=4, 準2級プラス=4.5, 2級=5, 準1級=6, 1級=7（未取得=0）。上昇＝現在−入学時。1年あたり上昇＝上昇÷在籍年数（今年度は0.5年で計算）。学年によって在籍期間が違うため、属性を比べるときは学年を1つに絞るか「1年あたり上昇」で見るのがおすすめです。</div></div>
+    </section>
+
+    <!-- 大学入試活用 -->
+    <section class="tab" id="t-un">
+      <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3>大学入試での英検の活用</h3><div class="sub">多くの大学の入試では、英検の「級」や「CSEスコア（4技能の合計）」「CEFRレベル」が出願資格・得点換算・加点に使われます。ここでは各生徒の活用できる成績を、級ごと・基準ごとにまとめます</div></div>
+        <div class="ctrl"><label class="muted" style="font-size:12px">有効期限の目安</label><select id="unYears"><option value="2" selected>受験から2年</option><option value="3">受験から3年</option><option value="0">期限を考えない</option></select><label class="muted" style="font-size:12px">基準日</label><input type="date" id="unBase" class="search" style="width:150px"></div></div>
+        <div class="grid g-kpi" id="unKpis"></div>
+        <div class="hint">CEFRは英検CSEスコアの4技能合計から判定（C1 2600以上／B2 2300以上／B1 1950以上／A2 1700以上／A1 1400以上）。一次で不合格だった回はSpeakingがないため、4技能の合計は二次まで受けた回（または5級・4級のSpeakingを受けた回）だけで計算します。従来型の受験日は、第1回＝6月・第2回＝10月・第3回＝翌年1月として期限を目安計算しています。実際の有効期限・要件は各大学の募集要項で必ず確認してください。</div></div>
+      <div class="card" style="margin-bottom:14px"><div class="card-head"><div><h3>出願要件チェック</h3><div class="sub">大学の募集要項にある英語の要件を入れると、満たしている生徒を一覧にします（上部のフィルタで学年・コース・クラスも絞れます）</div></div>
+        <div class="ctrl"><select id="unPreset"><option value="">よくある要件から選ぶ…</option><option value="lv:6">準1級以上</option><option value="lv:5">2級以上</option><option value="lv:4">準2級以上</option><option value="cse:2300">CEFR B2以上（CSE 2300以上）</option><option value="cse:1950">CEFR B1以上（CSE 1950以上）</option><option value="cse:1700">CEFR A2以上（CSE 1700以上）</option></select></div></div>
+        <div class="bk-grid" style="grid-template-columns:150px 1fr">
+          <label>取得級</label><div><select id="unLv"><option value="">指定しない</option><option value="7">1級以上</option><option value="6">準1級以上</option><option value="5">2級以上</option><option value="4.5">準2級プラス以上</option><option value="4">準2級以上</option><option value="3">3級以上</option></select></div>
+          <label>CSE 4技能合計</label><div><input type="number" id="unCse" class="search" style="width:140px" placeholder="例：1980"> 以上　<span class="muted" style="font-size:12px">（CEFR：</span><select id="unCefr"><option value="">指定しない</option><option value="2600">C1以上</option><option value="2300">B2以上</option><option value="1950">B1以上</option><option value="1700">A2以上</option></select><span class="muted" style="font-size:12px">）</span></div>
+          <label>各技能の最低点</label><div><input type="number" id="unEach" class="search" style="width:140px" placeholder="例：450"> 以上（R・L・W・Sすべて）</div>
+          <label>有効期限内のみ</label><div><label class="toggle"><input type="checkbox" id="unValid" checked> 基準日に有効期限内の成績だけで判定する</label></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:12px 0 6px;flex-wrap:wrap"><b id="unCount" style="margin-right:auto"></b><button class="btn small" id="unClear">条件をクリア</button><button class="btn small" id="unSheets">この生徒たちのシートを出力</button><button class="btn small" data-csv="tUnMatch">CSV</button></div>
+        <div class="scroll" style="max-height:420px"><table class="t" id="tUnMatch"></table></div></div>
+      <div class="card"><div class="card-head"><div><h3>級ごとの生徒リスト</h3><div class="sub">現在の級ごとにまとめた一覧。級の見出しをクリックで開閉。各生徒の「活用できる最高の成績」（4技能合計が最も高い回）も表示します</div></div>
+        <div class="ctrl"><button class="btn small" id="unOpenAll">すべて開く</button><button class="btn small" id="unCloseAll">すべて閉じる</button><button class="btn small" data-csv="tUnAll">全件CSV</button></div></div>
+        <div id="unLists" style="display:flex;flex-direction:column;gap:8px"></div>
+        <table id="tUnAll" hidden></table></div>
     </section>
 
     <!-- 生徒 -->
@@ -994,7 +1030,7 @@ function sortBar(el, cols, sort, def, defLabel, onReset){
 function render(){
   if(!DATA) return;
   const F = filtered(); $('#nCount').textContent = F.length;
-  ({ov:renderOverview, cc:renderClassCourse, gr:renderGrowth, at:renderAttempts, sk:renderSkills, bg:renderBackground, st:renderStudents})[state.tab](F);
+  ({ov:renderOverview, cc:renderClassCourse, gr:renderGrowth, at:renderAttempts, sk:renderSkills, bg:renderBackground, un:renderUniv, st:renderStudents})[state.tab](F);
 }
 
 function renderOverview(F){
@@ -1436,8 +1472,62 @@ function renderPredTable(F){
   $('#predNote').innerHTML = '予測は「先輩と同じペースで級が上がる」と仮定した参考値です。過去の学年で試したところ、学年全体の割合で ±5〜10ポイント程度の誤差がありました。指導の変化や受験回数が変われば結果も変わります。' + modelNote();
 }
 
+
+/* ---------- 塾・教室ごとの英語の強さ ---------- */
+const roomNorm = r => { const t=(r||'').replace(/\s/g,''); const u=t.replace(/(校舎|校|教室)$/,''); return u.length>=2 ? u : t; };
+let jkSort = null;
+function jkZ(list){
+  // 基準：同じ学年・同じ入学区分（DATA全体で計算し、フィルタで基準がぶれないようにする）
+  const grp = {}; DATA.forEach(s=>{ const k=s.gi+'|'+s.entry; (grp[k]=grp[k]||[]).push(s); });
+  const lastSk = (s,k) => { for (let i=s.exams.length-1;i>=0;i--) if (s.exams[i][k]!=null) return s.exams[i][k]; return null; };
+  const upYr = s => s.entryRank!=null&&s.currentRank!=null ? (s.currentRank-s.entryRank)/Math.max(0.5, s.gi-(s.startGi||1)+0.5) : null;
+  const getters = { entry:s=>s.entryRank, cur:s=>s.currentRank, up:upYr, R:s=>lastSk(s,'R'), L:s=>lastSk(s,'L'), W:s=>lastSk(s,'W'), S:s=>lastSk(s,'S') };
+  const st = {}; Object.entries(grp).forEach(([k,arr])=>{ st[k]={}; Object.entries(getters).forEach(([m,f])=>{ const v=arr.map(f).filter(x=>x!=null); const mu=mean(v); const sd=v.length>1? Math.sqrt(v.reduce((a,b)=>a+(b-mu)**2,0)/(v.length-1)) : 0; st[k][m]={mu,sd}; }); });
+  const out = new Map();
+  list.forEach(s=>{ const k=s.gi+'|'+s.entry; const z={}; Object.entries(getters).forEach(([m,f])=>{ const v=f(s), q=st[k][m]; z[m] = v==null||!q||!q.sd ? null : (v-q.mu)/q.sd; });
+    const sk=['R','L','W','S'].map(x=>z[x]).filter(v=>v!=null); z.skill = sk.length? mean(sk) : null;
+    const al=[z.cur,z.skill].filter(v=>v!=null); z.all = al.length? mean(al) : null; out.set(s.id, z); });
+  return out;
+}
+function renderJuku(F){
+  ['jkUnit','jkMin','jkMetric'].forEach(id=>$('#'+id).onchange=()=>{ if(id==='jkMetric') jkSort=null; render(); });
+  $('#jkSearch').oninput = render;
+  const unit=$('#jkUnit').value, min=+$('#jkMin').value, metric=$('#jkMetric').value, q=$('#jkSearch').value.trim().replace(/\s/g,'');
+  const Z = jkZ(F.filter(s=>s.juku));
+  const keyOf = s => !s.juku || /^(その他|なし|無し|不明|未記入)/.test(s.juku) ? '' : unit==='juku' ? s.juku : s.juku + '｜' + (roomNorm(s.jukuRoom) || '教室不明');
+  const groups = {}; F.forEach(s=>{ const k=keyOf(s); if(k && (!q || k.replace(/｜/g,'').includes(q))) (groups[k]=groups[k]||[]).push(s); });
+  const dev = (arr,m) => { const v=arr.map(s=>Z.get(s.id)?.[m]).filter(x=>x!=null); return v.length? {v:50+10*mean(v), n:v.length} : null; };
+  let rows = Object.entries(groups).filter(([,a])=>a.length>=min).map(([k,a])=>{
+    const r={k, n:a.length, arr:a}; ['all','cur','skill','entry','up','R','L','W','S'].forEach(m=>{ const d=dev(a,m); r[m]=d? d.v : null; r[m+'n']=d? d.n:0; });
+    const g=groupStats(a); r.pj2=g.pj2; r.p2=g.p2; r.entryLv=g.entry; r.curLv=g.cur;
+    const ne=a.map(s=>s.naishinEn).filter(v=>v!=null); r.nEn = ne.length? mean(ne) : null;
+    r.grades = [...new Set(a.map(s=>s.gi))].sort().map(gi=>`${GR[gi]}:${a.filter(s=>s.gi===gi).length}`).join('　');
+    const sk=['R','L','W','S'].filter(x=>r[x]!=null && r[x+'n']>=3); const hi=sk.filter(x=>r[x]>=53).sort((a,b)=>r[b]-r[a]); const lo=sk.filter(x=>r[x]<=47).sort((a,b)=>r[a]-r[b]);
+    r.feat = [hi[0]? `<span class="fb-plus">${SKJ[hi[0]]}に強い</span>`:'', lo[0]? `<span class="fb-minus">${SKJ[lo[0]]}が課題</span>`:''].filter(Boolean).join('・') || '<span class="muted">目立った偏りなし</span>';
+    return r; });
+  const s0 = jkSort || {k: metric, asc:false};
+  rows.sort((a,b)=>{ const x=a[s0.k], y=b[s0.k]; if (s0.k==='k') return (s0.asc?1:-1)*a.k.localeCompare(b.k,'ja'); if(x==null) return 1; if(y==null) return -1; return (s0.asc?1:-1)*(x-y); });
+  // グラフ（上位20）
+  const top = rows.filter(r=>r[metric]!=null).slice(0,20);
+  $('#jkChartWrap').style.height = Math.max(240, top.length*24+60)+'px';
+  const isDev = metric!=='n';
+  mk('cJk', { type:'bar', data:{ labels: top.map(r=>r.k.replace('｜',' ')), datasets:[{ label: $('#jkMetric').selectedOptions[0].textContent, data: top.map(r=>r[metric]), backgroundColor: top.map(r=> !isDev? css('--s1') : r[metric]>=50? css('--s1') : css('--s2')), borderRadius:4, borderSkipped:'start', barThickness:14, base: isDev? 50 : 0 }] },
+    options: baseOpts({ indexAxis:'y', scales:{ x:{ min: isDev? 30:0, max: isDev? 70: undefined, grid:{color:css('--line')}, ticks:{color:css('--ink-2')}, border:{display:false}, title:{display:isDev, text:'偏差値（50＝同じ学年・入学区分の平均）', color:css('--ink-3')} }, y:{grid:{display:false},ticks:{color:css('--ink-2'),font:{size:11}}} },
+      plugins:{...baseOpts().plugins, tooltip:{...baseOpts().plugins.tooltip, callbacks:{ label:c=>{ const r=top[c.dataIndex]; return ` ${c.dataset.label}：${isDev? c.raw.toFixed(1) : c.raw}（${r.n}名）`; } } } } }) });
+  // 表
+  const cols=[['k',unit==='juku'?'塾':'塾｜教室','l'],['n','人数'],['grades','学年の内訳','l'],['all','英語力（総合）'],['cur','現在の級'],['skill','技能スコア'],['entry','入学時の英語力'],['up','入学後の伸び'],['R','R'],['L','L'],['W','W'],['S','S'],['feat','技能の特徴','l'],['pj2','準2級以上'],['p2','2級以上'],['nEn','内申（英語）']];
+  const devCell = v => v==null? '<span class="muted">—</span>' : `<span style="font-weight:${v>=55||v<=45?700:400};color:${v>=55?'var(--good)':v<=45?'var(--crit)':'inherit'}">${v.toFixed(1)}</span>`;
+  const fmt = (k,r) => k==='k'? esc(r.k) : k==='n'? r.n : k==='grades'? `<span class="muted" style="font-size:12px">${r.grades}</span>` : k==='feat'? r.feat : (k==='pj2'||k==='p2')? fp(r[k]) : k==='nEn'? f1(r.nEn) : devCell(r[k]);
+  $('#tJk').innerHTML = `<thead><tr>${cols.map(([k,l,a])=>`<th class="${a||''} ${k==='grades'||k==='feat'?'':'sortable'} ${s0.k===k?'sorted'+(s0.asc?' asc':''):''}" data-k="${k}">${l}</th>`).join('')}</tr></thead><tbody>` +
+    (rows.map(r=>`<tr class="click" data-k="${esc(r.k)}">${cols.map(([k,,a])=>`<td class="${a||''}">${fmt(k,r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="l muted">該当する塾・教室がありません（最少人数を下げてみてください）</td></tr>`) + '</tbody>';
+  $$('#tJk th.sortable').forEach(th=>th.onclick=()=>{ const k=th.dataset.k; jkSort = {k, asc: s0.k===k ? !s0.asc : k==='k'}; render(); });
+  sortBar($('#jkSortBar'), cols, s0, {k:metric, asc:false}, $('#jkMetric').selectedOptions[0].textContent+'の高い順', ()=>{ jkSort=null; render(); });
+  $$('#tJk tr.click').forEach(tr=>tr.onclick=()=>{ const [j,rm]=tr.dataset.k.split('｜'); $('#stSearch').value = (j + (rm && rm!=='教室不明'? rm : '')).replace(/\s/g,''); state.tab='st'; $$('#tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==='st')); $$('section.tab').forEach(x=>x.classList.toggle('on', x.id==='t-st')); render(); window.scrollTo({top:0}); });
+}
+
 let bgSort = {k:'n', asc:false};
 function renderBackground(F){
+  renderJuku(F);
   const dsel=$('#bgDim'); if(!dsel.options.length){ dsel.innerHTML = Object.entries(DIMS).map(([k,d])=>`<option value="${k}">${d.lab}</option>`).join(''); dsel.value='juku'; dsel.onchange=render; $('#bgMin').onchange=render;
     $('#bgMetric').innerHTML = [['up','平均上昇（段階）'],['upYr','1年あたり上昇（段階）'],['cur','現在の級スコア'],['entry','入学時の級スコア'],['pj2','準2級以上の割合'],['p2','2級以上の割合'],['cse','CSE伸び(R+L)'],['passRate','合格率(延べ)']].map(([k,l])=>`<option value="${k}">${l}</option>`).join(''); $('#bgMetric').onchange=render; }
   const D = DIMS[dsel.value], min=+$('#bgMin').value, metric=$('#bgMetric').value;
@@ -1466,7 +1556,7 @@ function renderStudents(F){
   F = F || filtered();
   const lsel=$('#stLv'); if(lsel.options.length<2){ lsel.innerHTML += LV_ORDER.map(l=>`<option>${l}</option>`).join(''); lsel.onchange=()=>renderStudents(); $('#stSearch').oninput=()=>renderStudents(); }
   const q=$('#stSearch').value.trim().replace(/\s/g,''), lvq=lsel.value;
-  let rows = F.filter(s=> (!lvq || s.currentLevel===lvq) && (!q || [s.name,s.kana,s.id,s.school,s.juku].join('|').replace(/\s/g,'').includes(q)));
+  let rows = F.filter(s=> (!lvq || s.currentLevel===lvq) && (!q || [s.name,s.kana,s.id,s.school,s.juku,(s.juku||'')+(s.jukuRoom||'')].join('|').replace(/\s/g,'').includes(q)));
   const latest = s => { const a=s.exams.filter(e=>e.RLW!=null); return a.length? a[a.length-1].RLW : null; };
   const cols=[['id','学籍番号','l'],['name','氏名','l'],['grade','学年','l'],['cls','組','l'],['course','コース','l'],['entry','入学区分','l'],['entryRank',BL()+'の級'],['currentRank','現在の級'],['up','上昇'],['nExams','受験回数'],['nPass','合格回数'],['cse','直近CSE(R+L+W)'],['school','出身校','l'],['juku','塾','l']];
   const val = (s,k)=> k==='up' ? (s.entryRank!=null&&s.currentRank!=null? s.currentRank-s.entryRank : null) : k==='cse'? latest(s) : k==='grade'? s.gi*1000+(+s.cls||s.cls.charCodeAt(0)||0)+ (s.no||0)/1000 : k==='cls'? s.clsLabel : s[k];
@@ -1681,7 +1771,13 @@ function sheetHTML(s){
   </div>
   <div class="sh-row" style="grid-template-columns:${compact? (nCol>2?'1.95fr 0.6fr 1.05fr':'1.5fr 0.62fr 1.15fr') : '1.25fr 0.8fr 1.2fr'};flex:1">
     <div class="sh-card"><h5>受験の記録（すべて・古い順／全${hist.length}回）</h5>${histHTML}</div>
-    <div class="sh-card"><h5>合格基準との距離${tgt? '（'+tgt+'）':''}</h5>${th? gaugeHTML(RANK[tgt]<=2? '一次 R+L' : '一次 R+L+W', tgtSum, th[0]) + (th[1]? '<div style="height:3mm"></div>'+gaugeHTML('二次 Speaking', lastS, th[1]) : '') : '<div class="txt">—</div>'}<div class="txt" style="margin-top:auto">基準は英検CSEスコアの合格基準。今回のスコアで比べています。</div></div>
+    <div class="sh-card"><h5>合格基準との距離${tgt? '（'+tgt+'）':''}</h5>${th? gaugeHTML(RANK[tgt]<=2? '一次 R+L' : '一次 R+L+W', tgtSum, th[0]) + (th[1]? '<div style="height:3mm"></div>'+gaugeHTML('二次 Speaking', lastS, th[1]) : '') : '<div class="txt">—</div>'}${(()=>{ const u=univInfo(s); const b=u.bestValid||u.bestAll; const exp=b&&u.years? new Date(b.d.getFullYear()+u.years,b.d.getMonth(),b.d.getDate()) : null;
+      const next = b ? CEFR4.slice().reverse().find(([,v])=>v>b.t) : null;
+      return `<div style="margin-top:auto;border-top:0.3mm solid #e2e1dc;padding-top:2.5mm"><h5 style="margin:0 0 1.2mm">大学入試での活用（目安）</h5>
+        <div class="txt">取得級：<b>${s.currentLevel||'—'}</b>${u.passEx? '（'+esc(exJ(u.passEx))+'）':''}</div>
+        <div class="txt">最高CSE（4技能）：<b>${b? b.t : '記録なし'}</b>${b? ` <span style="display:inline-block;padding:0 2mm;border-radius:1.2mm;background:#e3eefb;color:#2a78d6;font-weight:700">CEFR ${cefrOf(b.t)}</span>`:''}</div>
+        <div class="txt">${b? esc(exJ(b.e))+'の成績'+(exp? '・有効期限の目安 '+ymdJ(exp)+'頃':'') : '二次まで受けると4技能スコアが出ます'}</div>
+        ${next? `<div class="txt">次のCEFR（${next[0]}）まで あと <b>${next[1]-b.t}</b></div>`:''}</div>`; })()}</div>
     <div class="sh-card"><h5>自己理解のヒント</h5><ul class="sh-hint">${hints.map(h=>`<li>${h}</li>`).join('')}</ul>
       <h5 style="margin-top:2mm">振り返りと次の目標（自分で書こう）</h5><div class="sh-lines"></div></div>
   </div>
@@ -1705,7 +1801,7 @@ $('#sheetPrint').onclick = () => { document.body.classList.add('printing'); wind
 $('#sheetClose').onclick = () => $('#sheetModal').classList.remove('on');
 document.addEventListener('click', e=>{ if(e.target.id!=='bulkSheet') return;
   const F = filtered(); const q=$('#stSearch').value.trim().replace(/\s/g,''), lvq=$('#stLv').value;
-  const rows = F.filter(s=> (!lvq || s.currentLevel===lvq) && (!q || [s.name,s.kana,s.id,s.school,s.juku].join('|').replace(/\s/g,'').includes(q)))
+  const rows = F.filter(s=> (!lvq || s.currentLevel===lvq) && (!q || [s.name,s.kana,s.id,s.school,s.juku,(s.juku||'')+(s.jukuRoom||'')].join('|').replace(/\s/g,'').includes(q)))
     .sort((a,b)=> a.gi-b.gi || String(a.cls).localeCompare(String(b.cls),'ja',{numeric:true}) || (a.no||0)-(b.no||0));
   if (!rows.length) return;
   if (rows.length>80 && !confirm(`${rows.length}名分のシートを出力します（A3で${rows.length}枚）。クラスなどで絞り込むと軽くなります。続けますか？`)) return;
@@ -1759,6 +1855,80 @@ $('#bkPreview').onclick = () => { const sel = bkTargets().filter(s=>!bk.off.has(
 $('#bkPrint').onclick = () => { const sel = bkTargets().filter(s=>!bk.off.has(s.id)); if(!sel.length) return;
   if (sel.length>150 && !confirm(`${sel.length}名分（A3で${sel.length}ページ）を出力します。時間がかかることがあります。続けますか？`)) return;
   printSheets(sel); };
+
+
+/* ---------- 大学入試活用 ---------- */
+const CEFR4 = [['C1',2600],['B2',2300],['B1',1950],['A2',1700],['A1',1400]];
+const cefrOf = t => { if (t==null) return null; const c = CEFR4.find(([,v])=>t>=v); return c? c[0] : 'A1未満'; };
+const tot4 = e => e.t4 && e.S!=null ? e.t4 : (e.R!=null && e.L!=null && e.S!=null ? e.R + e.L + (e.W??0) + e.S : null);
+function examDate(e){ if (e.cbt && e.date) { const [y,m,d]=e.date.split('/').map(Number); return new Date(y,m-1,d); } return e.rd===1? new Date(e.fy,5,15) : e.rd===2? new Date(e.fy,9,15) : new Date(e.fy+1,0,20); }
+const ymdJ = d => `${d.getFullYear()}/${d.getMonth()+1}`;
+function univInfo(s){
+  const full = (ALL && ALL.find(x=>x.id===s.id)) || s;
+  const years = +$('#unYears').value; const base = $('#unBase').value ? new Date($('#unBase').value) : new Date();
+  const from = years ? new Date(base.getFullYear()-years, base.getMonth(), base.getDate()) : new Date(1900,0,1);
+  const scored = full.exams.filter(e=>tot4(e)!=null).map(e=>({e, t:tot4(e), d:examDate(e)}));
+  const valid = scored.filter(x=>x.d>=from && x.d<=base);
+  const bestAll = scored.sort((a,b)=>b.t-a.t)[0] || null;
+  const bestValid = [...valid].sort((a,b)=>b.t-a.t)[0] || null;
+  const passEx = full.exams.filter(e=>e.pass && (RANK[e.got||e.lvl]===s.currentRank)).pop() || null;
+  const passValid = passEx ? (examDate(passEx)>=from) : null;
+  return { bestAll, bestValid, passEx, passValid, years, base };
+}
+const exJ = e => e.cbt ? `S-CBT ${e.date}` : `${e.fy}年度 第${e.rd}回`;
+function unRow(s, u, useValid){
+  const b = useValid ? u.bestValid : u.bestAll; const exp = b && u.years ? new Date(b.d.getFullYear()+u.years, b.d.getMonth(), b.d.getDate()) : null;
+  return `<td class="l">${s.id}</td><td class="l">${esc(nameOf(s))}</td><td class="l">${s.grade}</td><td class="l">${esc(s.clsLabel)}</td><td class="l">${esc(s.course)}</td><td class="l">${lvPill(s.currentLevel)}</td>
+    <td class="l">${u.passEx? exJ(u.passEx) + (u.passValid===false? ' <span class="muted">（期限外）</span>':'') : '<span class="muted">入学前・校外</span>'}</td>
+    <td><b>${b? b.t : '—'}</b></td><td class="l">${b? `<span class="cefr">${cefrOf(b.t)}</span>` : ''}</td><td class="l">${b? exJ(b.e)+'（'+b.e.lvl+'）' : '<span class="muted">4技能の記録なし</span>'}</td><td class="l">${exp? ymdJ(exp)+'頃' : '—'}</td>
+    <td>${b? b.e.R : '—'}</td><td>${b? b.e.L : '—'}</td><td>${b? (b.e.W??'—') : '—'}</td><td>${b? b.e.S : '—'}</td>`;
+}
+const UN_HEAD = `<th class="l">学籍番号</th><th class="l">氏名</th><th class="l">学年</th><th class="l">組</th><th class="l">コース</th><th class="l">現在の級</th><th class="l">その級に合格した回</th><th>最高CSE<br>（4技能）</th><th class="l">CEFR</th><th class="l">その成績の回</th><th class="l">有効期限の目安</th><th>R</th><th>L</th><th>W</th><th>S</th>`;
+const unOpen = new Set(['1級','準1級','2級']);
+let unMatch = [];
+function renderUniv(F){
+  if (!$('#unBase').value) $('#unBase').value = new Date().toISOString().slice(0,10);
+  ['unYears','unBase','unLv','unCse','unCefr','unEach','unValid'].forEach(id=>{ const el=$('#'+id); el.onchange = el.oninput = render; });
+  const useValid = $('#unValid').checked;
+  const info = new Map(F.map(s=>[s.id, univInfo(s)]));
+  const bestT = s => { const u=info.get(s.id); const b = useValid? u.bestValid : u.bestAll; return b? b.t : null; };
+  // KPI
+  const cnt = f => F.filter(f).length;
+  const kp = [['対象生徒', F.length, '名', '上部フィルタの範囲'], ['準1級以上', cnt(s=>(s.currentRank??0)>=6), '名', `${fp(pct(cnt(s=>(s.currentRank??0)>=6),F.length))}`], ['2級以上', cnt(s=>(s.currentRank??0)>=5), '名', `${fp(pct(cnt(s=>(s.currentRank??0)>=5),F.length))}`],
+    ['CEFR B2以上', cnt(s=>(bestT(s)??0)>=2300), '名', 'CSE 4技能 2300以上'], ['CEFR B1以上', cnt(s=>(bestT(s)??0)>=1950), '名', 'CSE 4技能 1950以上'], ['4技能スコアあり', cnt(s=>bestT(s)!=null), '名', useValid? '有効期限内の成績' : 'すべての成績']];
+  $('#unKpis').innerHTML = kp.map(([l,v,u,f])=>`<div class="card kpi"><div class="lab">${l}</div><div class="val">${v.toLocaleString()}<small>${u}</small></div><div class="foot">${f}</div></div>`).join('');
+  // 要件チェック
+  $('#unPreset').onchange = () => { const v=$('#unPreset').value; if(!v) return; const [t,n]=v.split(':'); $('#unLv').value=''; $('#unCse').value=''; $('#unCefr').value=''; if(t==='lv') $('#unLv').value=n; else $('#unCefr').value=n; $('#unPreset').value=''; render(); };
+  $('#unClear').onclick = () => { ['unLv','unCse','unCefr','unEach'].forEach(id=>$('#'+id).value=''); render(); };
+  const lv = $('#unLv').value, cse = Math.max(+$('#unCse').value||0, +$('#unCefr').value||0), each = +$('#unEach').value||0;
+  const any = lv!=='' || cse || each;
+  unMatch = !any ? [] : F.filter(s=>{ const u=info.get(s.id); const b = useValid? u.bestValid : u.bestAll;
+    if (lv!=='' && !((s.currentRank??-1) >= +lv && (!useValid || u.passValid!==false))) return false;
+    if (cse && !(b && b.t>=cse)) return false;
+    if (each && !(b && ['R','L','W','S'].every(k=>b.e[k]!=null && b.e[k]>=each))) return false;
+    return true; }).sort((a,b)=> (bestT(b)??0)-(bestT(a)??0));
+  const cond = [lv!==''? `${lvOf(+lv)}以上` : '', cse? `CSE 4技能合計 ${cse}以上（CEFR ${cefrOf(cse)}以上）` : '', each? `各技能 ${each}以上` : ''].filter(Boolean).join('・');
+  $('#unCount').textContent = any ? `${cond}${useValid?'（有効期限内）':''}を満たす生徒：${unMatch.length}名 / ${F.length}名` : '条件を指定すると、満たしている生徒が表示されます';
+  $('#tUnMatch').innerHTML = any ? `<thead><tr>${UN_HEAD}</tr></thead><tbody>` + (unMatch.map(s=>`<tr class="click" data-id="${s.id}">${unRow(s, info.get(s.id), useValid)}</tr>`).join('') || `<tr><td colspan="15" class="l muted">該当者はいません</td></tr>`) + '</tbody>' : '';
+  $$('#tUnMatch tr.click').forEach(tr=>tr.onclick=()=>openStudent(DATA.find(x=>x.id===tr.dataset.id)));
+  $('#unSheets').onclick = () => { if (!unMatch.length) return; if (unMatch.length>150 && !confirm(`${unMatch.length}名分を出力します。続けますか？`)) return; printSheets(unMatch); };
+  // 級ごとのリスト
+  const levels = [...LV_ORDER].reverse().filter(l=>F.some(s=>s.currentLevel===l));
+  const sortS = arr => arr.sort((a,b)=> (bestT(b)??-1)-(bestT(a)??-1) || a.gi-b.gi);
+  $('#unLists').innerHTML = levels.map(l=>{ const arr = sortS(F.filter(s=>s.currentLevel===l)); const gcnt = [...new Set(arr.map(s=>s.gi))].sort().map(g=>`${GR[g]} ${arr.filter(s=>s.gi===g).length}`).join('・');
+    return `<details class="un-lv" data-l="${l}" ${unOpen.has(l)?'open':''}><summary><span class="fb-caret">▸</span>${lvPill(l)}<b>${arr.length}名</b><span class="muted" style="font-size:12px">${gcnt}</span><span style="margin-left:auto;font-size:12px" class="muted">B2以上 ${arr.filter(s=>(bestT(s)??0)>=2300).length}名・B1以上 ${arr.filter(s=>(bestT(s)??0)>=1950).length}名</span><button class="btn small" data-uncsv="${l}">CSV</button></summary>
+      <div class="un-body"><div class="scroll" style="max-height:420px"><table class="t" id="tUn_${LV_ORDER.indexOf(l)}"><thead><tr>${UN_HEAD}</tr></thead><tbody>${arr.map(s=>`<tr class="click" data-id="${s.id}">${unRow(s, info.get(s.id), useValid)}</tr>`).join('')}</tbody></table></div></div></details>`; }).join('');
+  $$('#unLists details').forEach(d=>d.addEventListener('toggle',()=>{ d.open? unOpen.add(d.dataset.l) : unOpen.delete(d.dataset.l); }));
+  $$('#unLists tr.click').forEach(tr=>tr.onclick=()=>openStudent(DATA.find(x=>x.id===tr.dataset.id)));
+  $$('#unLists [data-uncsv]').forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); csvFromTable(document.getElementById('tUn_'+LV_ORDER.indexOf(b.dataset.uncsv)), `級別リスト_${b.dataset.uncsv}`); });
+  $('#unOpenAll').onclick = () => $$('#unLists details').forEach(d=>d.open=true);
+  $('#unCloseAll').onclick = () => $$('#unLists details').forEach(d=>d.open=false);
+  $('#tUnAll').innerHTML = `<thead><tr>${UN_HEAD}</tr></thead><tbody>` + levels.flatMap(l=>sortS(F.filter(s=>s.currentLevel===l)).map(s=>`<tr>${unRow(s, info.get(s.id), useValid)}</tr>`)).join('') + '</tbody>';
+}
+function csvFromTable(t, name){
+  const lines=[...t.querySelectorAll('tr')].map(tr=>[...tr.children].map(td=>'"'+td.textContent.replace(/\s+/g,' ').trim().replace(/"/g,'""')+'"').join(','));
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`英検分析_${name}_${new Date().toISOString().slice(0,10)}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
 
 /* ---------- CSV ---------- */
 document.addEventListener('click', e=>{
